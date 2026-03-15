@@ -315,7 +315,15 @@ body.placing .ccard{cursor:crosshair!important;box-shadow:0 0 0 2px #e8622a;}
   <button class="catToggle" id="catToggleBtn" onclick="toggleCat()" title="Catálogo">◀</button>
   <div class="floor">
     <div class="ftitle">Plano del almacen</div>
-    <div id="FDATA"></div>
+    <div style="padding:6px 10px 2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+  <span style="font-size:9px;color:#4e4a45;text-transform:uppercase;letter-spacing:.06em">Ocupación:</span>
+  <span style="display:flex;align-items:center;gap:3px;font-size:9px;color:#9c9490"><span style="width:10px;height:10px;border-radius:2px;background:rgba(255,255,255,.2);display:inline-block"></span>Vacía</span>
+  <span style="display:flex;align-items:center;gap:3px;font-size:9px;color:#9c9490"><span style="width:10px;height:10px;border-radius:2px;background:rgba(255,120,50,.65);display:inline-block"></span>Parcial</span>
+  <span style="display:flex;align-items:center;gap:3px;font-size:9px;color:#9c9490"><span style="width:10px;height:10px;border-radius:2px;background:#e8622a;display:inline-block"></span>Llena</span>
+  <span style="display:flex;align-items:center;gap:3px;font-size:9px;color:#9c9490"><span style="width:10px;height:10px;border-radius:2px;background:#e67e22;display:inline-block"></span>Revisión</span>
+  <span style="display:flex;align-items:center;gap:3px;font-size:9px;color:#9c9490"><span style="width:10px;height:10px;border-radius:2px;background:#c0392b;display:inline-block"></span>Roto</span>
+</div>
+<div id="FDATA"></div>
   </div>
   <div class="cont">
     <div class="conthd">
@@ -706,6 +714,10 @@ function syncBack(){
 }
 
 /* ---- FLOOR ---- */
+function hexToRgb(hex){
+  var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return r+','+g+','+b;
+}
 function renderFloor(){
   if(!wh)return;
   var fd=G('FDATA');fd.innerHTML='';
@@ -719,11 +731,32 @@ function renderFloor(){
       col.innerHTML='<div class="slabel2">'+(l.id==='IZQ'?'Izq':'Der')+'</div>';
       var rev=[].concat(l.estanterias).reverse();
       rev.forEach(function(e){
-        var strip=document.createElement('div');strip.className='estrip';strip.style.background=l.color;strip.dataset.pid=p.id;strip.dataset.lid=l.id;strip.dataset.num=e.num;
+        // Calculate occupancy
+        var totalCells=0,occupiedCells=0,hasRev=false,hasRot=false;
+        e.huecos.forEach(function(h){h.alturas.forEach(function(a){
+          totalCells++;
+          if(a.items&&a.items.length){
+            occupiedCells++;
+            a.items.forEach(function(it){
+              if(it.estado==='Revision')hasRev=true;
+              if(it.estado==='Roto')hasRot=true;
+            });
+          }
+        });});
+        var pct=totalCells?occupiedCells/totalCells:0;
+        // Color: base pasillo color, but tint based on occupancy/status
+        var stripBg=l.color;
+        if(hasRot) stripBg='#c0392b';
+        else if(hasRev) stripBg='#e67e22';
+        else if(pct===0) stripBg='rgba('+hexToRgb(l.color)+',0.35)';
+        else if(pct<0.5) stripBg='rgba('+hexToRgb(l.color)+',0.65)';
+        var strip=document.createElement('div');strip.className='estrip';strip.style.background=stripBg;strip.dataset.pid=p.id;strip.dataset.lid=l.id;strip.dataset.num=e.num;
         if(invSel&&invSel.pid===p.id&&invSel.lid===l.id&&invSel.num===e.num)strip.classList.add('sel');
         var hc=e.huecos.length,ac=e.huecos[0]&&e.huecos[0].alturas.length||1;
         var mini='';e.huecos.forEach(function(h){h.alturas.forEach(function(a){mini+='<div class="mc'+(a.items&&a.items.length?' has':'')+'"></div>';});});
-        strip.innerHTML='<span style="font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:#fff;min-width:16px">'+e.num+'</span><div class="emini" style="grid-template-columns:repeat('+hc+',1fr)">'+mini+'</div>';
+        // Occupancy badge
+        var badge=occupiedCells>0?'<span style="font-size:8px;background:rgba(0,0,0,.3);border-radius:3px;padding:1px 4px;color:#fff">'+occupiedCells+'/'+totalCells+'</span>':'';
+        strip.innerHTML='<span style="font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:#fff;min-width:16px">'+e.num+'</span><div class="emini" style="grid-template-columns:repeat('+hc+',1fr)">'+mini+'</div>'+badge;
         (function(pp,ll,ee){strip.onclick=function(){invSel={pid:pp.id,lid:ll.id,num:ee.num};renderFloor();renderContent();};})(p,l,e);
         col.appendChild(strip);
       });

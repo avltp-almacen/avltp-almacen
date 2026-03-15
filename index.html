@@ -1,0 +1,1251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AVLtp Almacen</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'DM Sans',system-ui,sans-serif;color:#1a1714;display:flex;flex-direction:column}
+/* HEADER */
+header{height:54px;background:#fff;border-bottom:1px solid #e5e0d8;display:flex;align-items:center;padding:0 18px;gap:12px;flex-shrink:0;z-index:100}
+.logo{width:34px;height:34px;background:#e8622a;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:11px;color:#fff;flex-shrink:0}
+.sp{flex:1}
+.tabs{display:flex;background:#f3f0eb;border-radius:9px;padding:3px;gap:2px}
+.tab{padding:6px 14px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;color:#7a756e;transition:all .15s;user-select:none}
+.tab.on{background:#fff;color:#1a1714;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.btn{padding:7px 14px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid #e5e0d8;background:#f3f0eb;color:#7a756e;font-family:inherit;transition:all .15s}
+.btn:hover{color:#1a1714;border-color:#cdc8bf}
+.btnp{background:#e8622a!important;color:#fff!important;border-color:#e8622a!important}
+.btnp:hover{background:#c94f1e!important}
+/* VIEWS */
+.view{flex:1;display:none;overflow:hidden}
+.view.on{display:flex}
+/* BUILDER */
+#vB{background:#1a1816}
+.pal{width:196px;flex-shrink:0;background:#202018;border-right:1px solid #2e2b27;overflow-y:auto;padding:14px 12px;display:flex;flex-direction:column;gap:4px}
+.pt{font-size:9px;font-weight:600;letter-spacing:.12em;color:#4e4a45;text-transform:uppercase;padding:5px 2px 7px}
+.sep{height:1px;background:#2e2b27;margin:8px 0}
+.piece{border-radius:10px;border:1.5px solid #2e2b27;background:#252220;padding:12px 10px;cursor:grab;user-select:none;display:flex;align-items:center;gap:10px;transition:border-color .15s}
+.piece:hover{border-color:#e8622a}
+.pi{padding:7px 10px;border:1px solid #3a3632;border-radius:8px;font-size:12px;font-family:inherit;color:#f0ece6;background:#252220;outline:none;width:100%}
+.pi:focus{border-color:#e8622a}
+.crow{display:flex;flex-wrap:wrap;gap:6px}
+.sw{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2.5px solid transparent;transition:transform .12s;flex-shrink:0;display:inline-block}
+.sw:hover{transform:scale(1.25)}
+.sw.on{border-color:#f0ece6;transform:scale(1.15)}
+.orow{display:flex;gap:5px}
+.ob{flex:1;padding:7px 4px;border-radius:8px;border:1.5px solid #2e2b27;background:#252220;font-size:10px;font-weight:600;color:#8c8680;cursor:pointer;text-align:center;font-family:inherit;user-select:none;transition:all .15s}
+.ob.on{background:#e8622a;color:#fff;border-color:#e8622a}
+.cr{display:flex;align-items:center;gap:8px}
+.cb{width:28px;height:28px;border-radius:7px;border:1px solid #3a3632;background:#252220;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8c8680;user-select:none;transition:all .15s;flex-shrink:0}
+.cb:hover{border-color:#e8622a;color:#e8622a}
+.cv{font-size:19px;font-weight:800;color:#f0ece6;font-family:'DM Mono',monospace;min-width:28px;text-align:center}
+.cu{font-size:10px;color:#4e4a45;font-weight:600}
+/* CANVAS */
+.bcanv{flex:1;overflow:auto;background:#1a1816;background-image:radial-gradient(circle,#2a2724 1px,transparent 1px);background-size:24px 24px;position:relative;user-select:none}
+.bgc{display:inline-block;padding:50px 48px 48px 60px;position:relative}
+.bgrid{display:grid;position:relative;background:#252220;border:1.5px solid #2e2b27;border-radius:14px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.gc{border-right:1px solid #2e2b27;border-bottom:1px solid #2e2b27}
+.gc.ok{background:rgba(232,98,42,.2)!important}
+.gc.bad{background:rgba(239,68,68,.2)!important}
+.rl{position:absolute;left:-34px;width:30px;text-align:right;font-size:10px;color:#4e4a45;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:flex-end}
+.cl{position:absolute;top:-24px;height:22px;font-size:10px;color:#4e4a45;font-family:'DM Mono',monospace;display:flex;align-items:center;justify-content:center}
+.hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;opacity:.3}
+.zoom-ctrl{position:absolute;bottom:14px;right:14px;z-index:100;display:flex;gap:6px;align-items:center}
+.zoom-btn{width:30px;height:30px;border-radius:8px;background:#2a2724;border:1px solid #3a3530;color:#cdc8bf;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;transition:background .1s}
+.zoom-btn:hover{background:#3a3530}
+.zoom-lbl{font-size:10px;color:#4e4a45;min-width:32px;text-align:center}
+/* SHELF */
+* {-webkit-user-drag:none;user-drag:none;}
+.icard[draggable]{-webkit-user-drag:element;}
+.bshelf{position:absolute;border-radius:6px;overflow:hidden;z-index:10;display:flex;flex-direction:column;transition:box-shadow .15s,transform .1s;cursor:pointer;background:#1e1c1a;border:1.5px solid rgba(255,255,255,.08)}
+.bshelf:hover{z-index:20;box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 0 1.5px rgba(255,255,255,.15);transform:translateY(-1px)}
+.bshelf.sel{z-index:30;box-shadow:0 4px 24px rgba(0,0,0,.6),0 0 0 2px #e8622a}
+.bshelf.faded{opacity:.15}
+.shd{padding:6px 8px;display:flex;align-items:center;gap:5px;flex-shrink:0;overflow:hidden}
+.shn{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;line-height:1;padding:1px 5px;border-radius:3px}
+.slb{font-size:8px;color:rgba(255,255,255,.45);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;text-transform:uppercase;letter-spacing:.04em}
+.sg{flex:1;display:grid;padding:5px;gap:3px}
+.sc{background:rgba(255,255,255,.04);border-radius:3px;border:1px solid rgba(255,255,255,.07)}
+.bshelf:hover .sc{background:rgba(255,255,255,.07)}
+/* PROPS */
+.bpr{width:220px;flex-shrink:0;background:#202018;border-left:1px solid #2e2b27;display:flex;flex-direction:column;overflow-y:auto}
+.bprhd{padding:14px 16px 12px;border-bottom:1px solid #2e2b27;font-size:9px;font-weight:600;letter-spacing:.12em;color:#4e4a45;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.bprhd::before{content:'';display:block;width:3px;height:14px;background:#e8622a;border-radius:2px}
+.pbd{padding:14px;display:flex;flex-direction:column;gap:13px}
+.pg{display:flex;flex-direction:column;gap:5px}
+.pl{font-size:9px;color:#4e4a45;font-weight:600;letter-spacing:.1em;text-transform:uppercase}
+.delbtn{padding:9px;border-radius:8px;background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);font-size:11px;font-weight:700;cursor:pointer;text-align:center;font-family:inherit;width:100%}
+.delbtn:hover{background:rgba(239,68,68,.2)}
+/* CELL MODAL */
+.cov{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.cmod{background:#202018;border:1px solid #3a3632;border-radius:14px;padding:22px;width:320px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.6)}
+.cmhd{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-shrink:0}
+.cmx{cursor:pointer;color:#4e4a45;font-size:22px;padding:0 4px;user-select:none;line-height:1}
+.cmx:hover{color:#f0ece6}
+.ilist{display:flex;flex-direction:column;gap:6px;overflow-y:auto;margin-bottom:12px;flex:1}
+.iitem{display:flex;align-items:center;gap:8px;background:#252220;border:1px solid #2e2b27;border-radius:8px;padding:8px 10px}
+.isel{font-size:10px;padding:3px 6px;border-radius:6px;border:1px solid #3a3632;background:#252220;color:#8c8680;font-family:inherit;cursor:pointer;outline:none}
+.ix{color:#4e4a45;cursor:pointer;font-size:15px;padding:2px 6px;user-select:none;line-height:1}
+.ix:hover{color:#f87171}
+.cadd{display:flex;gap:6px;flex-shrink:0}
+.cai{flex:1;padding:8px 10px;border:1px solid #3a3632;border-radius:8px;font-size:12px;font-family:inherit;color:#f0ece6;background:#252220;outline:none}
+.cai:focus{border-color:#e8622a}
+.cab{padding:8px 14px;background:#e8622a;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+/* CATALOG PANEL */
+#catPanel{width:280px;flex-shrink:0;background:#fdfcfa;border-right:1px solid #ece8e2;display:flex;flex-direction:column;overflow:hidden;transition:width .2s}
+#catPanel.hidden{width:0;overflow:hidden}
+.catHdr{padding:10px 12px 6px;border-bottom:1px solid #ece8e2;flex-shrink:0}
+.catHdr h3{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:#2c2925;margin:0 0 6px}
+.catSearch{width:100%;box-sizing:border-box;border:1px solid #ddd9d3;border-radius:6px;padding:6px 9px;font-size:12px;outline:none;background:#fff}
+.catSearch:focus{border-color:#e8622a}
+.catGrps{display:flex;flex-wrap:wrap;gap:4px;padding:6px 12px;border-bottom:1px solid #ece8e2;flex-shrink:0}
+.catGrp{font-size:9px;padding:2px 7px;border-radius:10px;border:1px solid #ddd9d3;cursor:pointer;background:#fff;color:#5c5852;font-weight:600;white-space:nowrap}
+.catGrp.on{background:#e8622a;color:#fff;border-color:#e8622a}
+.catList{flex:1;overflow-y:auto;padding:6px 0}
+.catItem{padding:7px 12px;cursor:pointer;border-bottom:1px solid #f0ece6;display:flex;align-items:center;gap:8px}
+.catItem:hover{background:#faf5f0}
+.catItem.selected{background:#fff3ee;border-left:3px solid #e8622a}
+.catItem.placed{opacity:.4}
+.catItem-name{font-size:11px;color:#2c2925;flex:1;line-height:1.3}
+.catItem-qty{font-size:10px;color:#9c9490;font-weight:700;flex-shrink:0}
+.catToggle{position:absolute;left:280px;top:50%;transform:translateY(-50%);z-index:10;background:#e8622a;color:#fff;border:none;border-radius:0 6px 6px 0;width:18px;height:40px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:left .2s}
+#catPanel.hidden~.catToggle,#vI .catToggle{left:0}
+.placing-hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2c2925;color:#fff;padding:10px 20px;border-radius:20px;font-size:12px;z-index:9999;pointer-events:none;display:none}
+.placing-hint.on{display:block}
+/* SEARCH GLOBAL */
+.gsearch-wrap{position:relative;flex:1;max-width:340px}
+.gsearch{width:100%;box-sizing:border-box;padding:7px 32px 7px 10px;border:1px solid #ddd9d3;border-radius:7px;font-size:12px;outline:none;background:#fff}
+.gsearch:focus{border-color:#e8622a}
+.gsearch-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:#9c9490;font-size:14px;display:none}
+.gsearch-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #ddd9d3;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:999;max-height:320px;overflow-y:auto}
+.gsr-item{padding:9px 12px;border-bottom:1px solid #f0ece6;cursor:pointer;display:flex;flex-direction:column;gap:2px}
+.gsr-item:hover{background:#faf5f0}
+.gsr-name{font-size:12px;font-weight:600;color:#2c2925}
+.gsr-loc{font-size:10px;color:#9c9490}
+.gsr-empty{padding:14px;text-align:center;font-size:11px;color:#9c9490}
+/* QTY MODAL */
+.qty-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:10000;display:flex;align-items:center;justify-content:center}
+.qty-modal{background:#fff;border-radius:12px;padding:24px;width:300px;box-shadow:0 16px 48px rgba(0,0,0,.2)}
+.qty-modal h3{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#2c2925;margin:0 0 4px}
+.qty-modal p{font-size:11px;color:#9c9490;margin:0 0 16px;line-height:1.4}
+.qty-input{width:100%;box-sizing:border-box;border:1px solid #ddd9d3;border-radius:7px;padding:10px;font-size:20px;font-weight:700;text-align:center;outline:none;color:#2c2925}
+.qty-input:focus{border-color:#e8622a}
+.qty-btns{display:flex;gap:8px;margin-top:14px}
+.qty-btn{flex:1;padding:10px;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer}
+.qty-btn.cancel{background:#f0ece6;color:#5c5852}
+.qty-btn.ok{background:#e8622a;color:#fff}
+/* SHELF SUMMARY */
+.shelf-summary{padding:12px 14px;border-bottom:1px solid #ece8e2;background:#fdfcfa;flex-shrink:0}
+.ss-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:#2c2925;margin-bottom:8px}
+.ss-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.ss-stat{background:#fff;border:1px solid #ece8e2;border-radius:7px;padding:8px 10px;text-align:center}
+.ss-num{font-size:18px;font-weight:800;color:#2c2925}
+.ss-lbl{font-size:9px;color:#9c9490;margin-top:1px}
+.ss-ok .ss-num{color:#16a34a}
+.ss-rev .ss-num{color:#d97706}
+.ss-rot .ss-num{color:#dc2626}
+body.placing .ccard{cursor:crosshair!important;box-shadow:0 0 0 2px #e8622a;}
+/* ITEM DRAG */
+.icard[draggable]{cursor:grab}
+.icard.dragging{opacity:.35;outline:2px dashed #e8622a}
+.ccard.drag-over{box-shadow:0 0 0 2px #e8622a;background:#fff3ee!important}
+.ccard.drag-over .cref{color:#e8622a!important}
+.estrip.drag-accept{box-shadow:0 0 0 2px #e8622a;filter:brightness(1.15);cursor:crosshair}
+.transit-bar{display:none;align-items:center;gap:8px;padding:7px 12px;background:#fff7f4;border-bottom:1px solid #fcd9c8;font-size:11px;font-weight:600;color:#e8622a;flex-shrink:0}
+.transit-bar.on{display:flex}
+/* INVENTORY */
+#vI{background:#faf9f7}
+.floor{width:280px;flex-shrink:0;overflow-y:auto;background:#fff;border-right:1px solid #e5e0d8;padding:12px 10px}
+.ftitle{font-size:10px;font-weight:700;letter-spacing:.1em;color:#9c9490;text-transform:uppercase;padding:4px 6px 10px}
+.psides{display:flex;gap:4px;padding:0 4px}
+.scol{flex:1;display:flex;flex-direction:column;gap:3px}
+.slabel2{font-size:9px;font-weight:700;color:#9c9490;text-transform:uppercase;padding:2px 4px}
+.estrip{border-radius:7px;padding:5px 6px;cursor:pointer;border:1.5px solid transparent;display:flex;align-items:center;gap:6px;transition:border-color .12s}
+.estrip.sel{border-color:rgba(0,0,0,.3);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.emini{display:grid;gap:1px;flex:1}
+.mc{height:5px;border-radius:1px;background:rgba(255,255,255,.3)}
+.mc.has{background:rgba(255,255,255,.75)}
+.cont{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.conthd{padding:14px 20px 12px;border-bottom:1px solid #e5e0d8;background:#fff;flex-shrink:0}
+.ctitle{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.csub{font-size:12px;color:#9c9490;margin-top:2px}
+.contbody{flex:1;overflow-y:auto;padding:16px}
+.cgrid{display:grid;gap:10px}
+.ccard{background:#fff;border:1px solid #e5e0d8;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+.cref{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.icard{background:#f8f7f5;border:1px solid #e5e0d8;border-radius:8px;padding:8px 10px;display:flex;align-items:flex-start;gap:8px}
+.icard-name{font-size:12px;font-weight:600}
+.iacts{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.iact{font-size:10px;padding:3px 8px;border-radius:20px;background:#f3f0eb;color:#6b6560;border:1px solid #e5e0d8;cursor:pointer;font-weight:600}
+.iact:hover{color:#1a1714;border-color:#cdc8bf}
+.iact.d{background:#fee2e2;color:#b91c1c;border-color:#fca5a5}
+.ebadge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;cursor:pointer;flex-shrink:0;border:1px solid transparent;white-space:nowrap}
+.eOK{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+.eRev{background:#fef9c3;color:#a16207;border-color:#fde68a}
+.eRot{background:#fee2e2;color:#b91c1c;border-color:#fecaca}
+.addrow{display:flex;gap:6px;margin-top:4px}
+.addinp{flex:1;padding:7px 10px;border:1px dashed #cdc8bf;border-radius:8px;font-size:11px;font-family:inherit;color:#1a1714;background:#fff;outline:none}
+.addinp:focus{border-color:#e8622a;border-style:solid}
+.addbtn{padding:7px 12px;background:#e8622a;color:#fff;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
+.pastebar{background:#fff7f4;border:1px solid #fcd9c8;border-radius:8px;padding:6px 10px;font-size:11px;color:#e8622a;font-weight:600;cursor:pointer;margin-top:4px}
+/* EXPORT */
+.eov{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.emod{background:#fff;border-radius:16px;padding:26px;max-width:480px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.15)}
+.emod h2{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;margin-bottom:6px}
+.emod p{font-size:12px;color:#9c9490;margin-bottom:14px;line-height:1.6}
+.emod textarea{width:100%;height:180px;padding:12px;font-family:'DM Mono',monospace;font-size:10px;border:1px solid #e5e0d8;border-radius:8px;resize:none;background:#faf9f7;outline:none}
+.ebtns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+/* TOAST */
+.toast{position:fixed;bottom:20px;right:20px;background:#1a1714;color:#fff;padding:9px 16px;border-radius:10px;font-size:12px;font-weight:500;z-index:9999;opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none}
+.toast.on{opacity:1;transform:translateY(0)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:#e5e0d8;border-radius:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">AV</div>
+  <div>
+    <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700">AVLtp Almacen</div>
+    <div style="font-size:10px;color:#9c9490;letter-spacing:.06em;text-transform:uppercase">Gestion de inventario</div>
+  </div>
+  <div class="sp"></div>
+  <div class="tabs">
+    <div class="tab on" id="tabB" onclick="setMode('B')">Constructor</div>
+    <div class="tab" id="tabI" onclick="setMode('I')">Inventario</div>
+  </div>
+  <div class="sp"></div>
+  <div id="hdrB" style="display:flex;gap:8px"><button class="btn" onclick="doUndo()" title="Deshacer (Ctrl+Z)">↩ Deshacer</button>
+    <button class="btn" onclick="doClear()">Limpiar</button>
+    <button class="btn" onclick="doSave()">Guardar</button>
+    <button class="btn btnp" onclick="goInv()">Ir al inventario</button>
+  </div>
+  <div id="hdrI" style="display:none;gap:8px">
+    <div class="gsearch-wrap">
+      <input class="gsearch" id="GSEARCH" placeholder="🔍  Buscar en todo el almacén..." oninput="onGSearch()" onkeydown="onGSearchKey(event)" autocomplete="off">
+      <span class="gsearch-clear" id="GSCLEAR" onclick="clearGSearch()">✕</span>
+      <div class="gsearch-results" id="GSRESULTS" style="display:none"></div>
+    </div>
+    <button class="btn" onclick="doSave()">Guardar</button>
+    <button class="btn" onclick="doExport()">Exportar JSON</button>
+  </div>
+</header>
+
+<div class="view on" id="vB">
+  <div class="pal">
+    <div class="pt">Pieza</div>
+    <div class="piece" id="PAL">
+      <div id="PALICO" style="width:40px;height:40px;border-radius:8px;flex-shrink:0;border:2px dashed rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center"><div style="width:18px;height:18px;border-radius:3px;background:rgba(255,255,255,.35)"></div></div>
+      <div><div style="font-size:12px;font-weight:600;color:#f0ece6">Estanteria</div><div style="font-size:10px;color:#4e4a45;margin-top:2px">Arrastra al plano</div></div>
+    </div>
+    <div class="sep"></div>
+    <div class="pt">Color</div>
+    <div class="crow" id="COLORS"></div>
+    <div class="sep"></div>
+    <div class="pt">Nombre del pasillo</div>
+    <input id="PALNAME" class="pi" type="text" placeholder="Ej: Pasillo A..." style="font-size:11px;padding:6px 8px" oninput="setPName(this.value)">
+    <div style="font-size:9px;color:#4e4a45;margin-top:3px;line-height:1.5">Para el color seleccionado</div>
+    <div class="sep"></div>
+    <div class="pt">Orientacion</div>
+    <div class="orow">
+      <div class="ob on" id="OV" onclick="setOrient('V')">Vertical</div>
+      <div class="ob" id="OH" onclick="setOrient('H')">Horiz.</div>
+    </div>
+    <div class="sep"></div>
+    <div class="pt">Huecos</div>
+    <div class="cr">
+      <div class="cb" onclick="chg('H',-1)">-</div>
+      <div class="cv" id="VH">3</div>
+      <div class="cu">H</div>
+      <div class="cb" onclick="chg('H',1)">+</div>
+    </div>
+    <div class="pt" style="margin-top:10px">Alturas</div>
+    <div class="cr">
+      <div class="cb" onclick="chg('A',-1)">-</div>
+      <div class="cv" id="VA">3</div>
+      <div class="cu">A</div>
+      <div class="cb" onclick="chg('A',1)">+</div>
+    </div>
+    <div class="sep"></div>
+    <div class="pt">Pasillos</div>
+    <div id="PCHIPS" style="display:flex;flex-direction:column;gap:4px"></div>
+    <div class="sep"></div>
+    <div style="font-size:10px;color:#4e4a45;line-height:1.9">
+      <b style="color:#8c8680">1.</b> Elige color y tamano<br>
+      <b style="color:#8c8680">2.</b> Arrastra al plano<br>
+      <b style="color:#8c8680">3.</b> Toca para editar<br>
+      <b style="color:#8c8680">4.</b> Arrastra para mover
+    </div>
+  </div>
+
+  <div class="bcanv" id="CANV" style="position:relative;overflow:auto">
+    <div class="bgc" id="GC" style="transform-origin:top left">
+      <div class="bgrid" id="GRID"></div>
+      <div class="hint" id="HINT">
+        <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:#8c8680;margin-bottom:4px">Arrastra una estanteria aqui</div>
+        <div style="font-size:11px;color:#4e4a45">Empieza a construir tu almacen</div>
+      </div>
+    </div>
+    <div class="zoom-ctrl">
+      <button class="zoom-btn" onclick="setZoom(-1)">−</button>
+      <span class="zoom-lbl" id="ZLBL">100%</span>
+      <button class="zoom-btn" onclick="setZoom(1)">+</button>
+    </div>
+  </div>
+
+  <div class="bpr">
+    <div class="bprhd">Propiedades</div>
+    <div id="PROPS"><div style="padding:28px 16px;text-align:center;color:#4e4a45;font-size:11px;line-height:1.8"><b style="color:#8c8680;font-size:12px">Sin seleccion</b><br><br>Toca una estanteria<br>para editarla</div></div>
+  </div>
+</div>
+
+<div class="view" id="vI" style="position:relative">
+  <div id="catPanel">
+    <div class="catHdr">
+      <h3>Catálogo</h3>
+      <input class="catSearch" id="catQ" placeholder="Buscar ítem..." oninput="filterCat()">
+    </div>
+    <div class="catGrps" id="catGrps"></div>
+    <div class="catList" id="catList"></div>
+  </div>
+  <button class="catToggle" id="catToggleBtn" onclick="toggleCat()" title="Catálogo">◀</button>
+  <div class="floor">
+    <div class="ftitle">Plano del almacen</div>
+    <div id="FDATA"></div>
+  </div>
+  <div class="cont">
+    <div class="conthd">
+      <div class="ctitle" id="CTITLE">Selecciona una estanteria</div>
+      <div class="csub" id="CSUB"></div>
+      <div id="CLIPBAR" style="display:none;align-items:center;gap:8px;padding:6px 12px;background:#fff7f4;border-top:1px solid #fcd9c8;font-size:11px;color:#e8622a;font-weight:600">
+        <span>📋 Copiando: <span id="CLIPNAME"></span></span>
+        <div onclick="cancelClip()" style="margin-left:auto;cursor:pointer;font-size:13px;color:#9c9490;font-weight:700;padding:0 4px" title="Cancelar">✕</div>
+      </div>
+    </div>
+    <div class="transit-bar" id="TRANSITBAR">
+      <span>✦ En tránsito: <span id="TRANSITNAME"></span></span>
+      <span style="color:#9c9490;font-weight:400">→ Selecciona celda destino</span>
+      <div onclick="cancelTransit()" style="margin-left:auto;cursor:pointer;font-size:14px;color:#9c9490" title="Cancelar">✕</div>
+    </div>
+    <div id="SSUMMARY" style="display:none"></div>
+    <div class="contbody" id="CBODY">
+      <div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9c9490;font-size:13px;flex-direction:column;gap:8px">
+        <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#cdc8bf">Sin seleccion</div>
+        Toca una estanteria del plano
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="TOAST"></div>
+<div class="eov" id="EMOD" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+  <div class="emod">
+    <h2>Exportar almacen</h2><p>JSON con toda la estructura e items.</p>
+    <textarea id="ETXT" readonly></textarea>
+    <div class="ebtns">
+      <button class="btn" onclick="G('EMOD').style.display='none'">Cerrar</button>
+      <button class="btn btnp" onclick="navigator.clipboard.writeText(G('ETXT').value);toast('Copiado')">Copiar</button>
+      <button class="btn btnp" onclick="dlJ()">Descargar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.onerror = function(msg, src, line, col, err) {
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;padding:12px;font-size:13px;z-index:99999;font-family:monospace;white-space:pre-wrap';
+  d.textContent = 'JS ERROR: ' + msg + '\nLine: ' + line + ' Col: ' + col + '\n' + (err ? err.stack : '');
+  document.body.appendChild(d);
+  return false;
+};
+const COLS=36,ROWS=30,CELL=28;
+const COLORS=['#e8622a','#06b6d4','#a855f7','#22c55e','#f59e0b','#3b82f6','#ec4899','#14b8a6','#f97316','#64748b'];
+const ESTADOS=['OK','Revision','Roto'];
+const ECLS={OK:'eOK',Revision:'eRev',Roto:'eRot'};
+
+let shelves=[],sid=0,selId=null;
+let color=COLORS[0],orient='V',nH=3,nA=3,pnames={},zoom=1,history=[],histIdx=-1;
+let wh=null,invSel=null,clip=null;
+let drag=null;
+
+function G(id){return document.getElementById(id);}
+
+window.addEventListener('DOMContentLoaded',function(){
+  buildGrid();
+  buildColors();
+  // Pointer events — unified mouse+touch, captures even outside window
+  // Block ALL HTML5 drag in builder; inventory view re-enables via initDragDrop
+  document.addEventListener('dragstart',function(e){if(mode!=='I'||!e.target.closest('.icard[draggable]')){e.preventDefault();return false;}});
+  G('PAL').setAttribute('draggable','false');
+  G('PAL').addEventListener('pointerdown',function(e){
+    if(e.button!==0&&e.pointerType==='mouse')return;
+    e.preventDefault();
+    G('PAL').setPointerCapture(e.pointerId);
+    startDrag('new',null,e.clientX,e.clientY);
+  });
+  document.addEventListener('pointermove',function(e){if(drag)onMove(e.clientX,e.clientY);});
+  document.addEventListener('pointerup',function(e){if(drag)onUp(e.clientX,e.clientY);});
+  document.addEventListener('dragover',function(e){e.preventDefault();});
+  document.addEventListener('drop',function(e){e.preventDefault();});
+  document.addEventListener('pointercancel',function(e){if(drag)onUp(e.clientX,e.clientY);});
+  document.addEventListener('keydown',function(e){
+    if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();doUndo();}
+  });
+  G('CANV').addEventListener('click',function(e){
+    var t=e.target;
+    if(!t.classList.contains('bshelf')&&!t.closest('.bshelf'))desel();
+  });
+  loadState();
+});
+
+function buildGrid(){
+  var gr=G('GRID'),gc=G('GC');
+  gr.style.gridTemplateColumns='repeat('+COLS+','+CELL+'px)';
+  gr.style.gridTemplateRows='repeat('+ROWS+','+CELL+'px)';
+  for(var c=0;c<COLS;c++){var l=document.createElement('div');l.className='cl';l.style.left=(c*CELL+48)+'px';l.style.width=CELL+'px';l.textContent=c+1;gc.appendChild(l);}
+  for(var r=0;r<ROWS;r++){var l2=document.createElement('div');l2.className='rl';l2.style.top=(r*CELL+50)+'px';l2.style.height=CELL+'px';l2.textContent=String.fromCharCode(65+r);gc.appendChild(l2);}
+  for(var r2=0;r2<ROWS;r2++)for(var c2=0;c2<COLS;c2++){var el=document.createElement('div');el.className='gc';el.dataset.c=c2;el.dataset.r=r2;gr.appendChild(el);}
+}
+
+function buildColors(){
+  var html='';
+  for(var i=0;i<COLORS.length;i++){
+    var c=COLORS[i];
+    html+='<div class="sw'+(c===color?' on':'')+'" style="background:'+c+'" onclick="setColor(\''+c+'\')"></div>';
+  }
+  G('COLORS').innerHTML=html;
+  G('PALICO').style.background=color;
+  G('PALNAME').value=pnames[color]||'';
+  buildChips();
+}
+
+function setColor(c){color=c;buildColors();}
+function setPName(v){pnames[color]=v.trim();buildChips();}
+
+function buildChips(){
+  var used=COLORS.filter(function(c){return shelves.some(function(s){return s.color===c;});});
+  if(!used.length){G('PCHIPS').innerHTML='<div style="font-size:10px;color:#4e4a45">Ninguno aun</div>';return;}
+  var html='';
+  for(var i=0;i<used.length;i++){
+    var c=used[i];
+    html+='<div onclick="setColor(\''+c+'\')" style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:#252220;border-radius:7px;border:1.5px solid '+(c===color?c:'#2e2b27')+';cursor:pointer">'
+      +'<div style="width:10px;height:10px;border-radius:50%;background:'+c+';flex-shrink:0"></div>'
+      +'<div style="font-size:11px;color:#f0ece6;font-weight:600;flex:1">'+(pnames[c]||'Sin nombre')+'</div>'
+      +'<div style="font-size:9px;color:#4e4a45">'+shelves.filter(function(s){return s.color===c;}).length+'</div>'
+      +'</div>';
+  }
+  G('PCHIPS').innerHTML=html;
+}
+
+function setOrient(o){orient=o;G('OV').classList.toggle('on',o==='V');G('OH').classList.toggle('on',o==='H');}
+function chg(k,d){
+  if(k==='H'){nH=Math.max(1,Math.min(10,nH+d));G('VH').textContent=nH;}
+  else{nA=Math.max(1,Math.min(10,nA+d));G('VA').textContent=nA;}
+}
+
+/* ---- DRAG ---- */
+function killGhost(){var g=G('_G');if(g)g.remove();}
+
+function startDrag(type,shid,cx,cy){
+  killGhost();
+  var c=color,h=nH,a=nA,o=orient,lbl='';
+  var num=shelves.length?Math.max.apply(null,shelves.map(function(s){return s.num;}))+1:1;
+  if(type==='move'){
+    var s=shelves.find(function(x){return x.id===shid;});if(!s)return;
+    c=s.color;h=s.huecos;a=s.alturas;o=s.orient;num=s.num;lbl=s.nombre;
+    var el=G('S'+shid);if(el)el.classList.add('faded');
+  }
+  var g=document.createElement('div');
+  g.id='_G';
+  var gw=shelfW(orient,nH,nA),gh=shelfH(orient,nH,nA);g.setAttribute('style','position:fixed!important;pointer-events:none!important;z-index:99999!important;width:'+gw+'px;height:'+gh+'px;background:#1e1c1a;border:1.5px solid rgba(255,255,255,.1);left:'+(cx-gw/2)+'px;top:'+(cy-gh/2)+'px;border-radius:6px;opacity:.88;transform:scale(.95) rotate(-1.5deg);box-shadow:0 14px 40px rgba(0,0,0,.55);display:flex;flex-direction:column;overflow:hidden');
+  g.innerHTML=sInner(num,lbl,o,h,a,color);
+  document.body.appendChild(g);
+  drag={type:type,shid:shid};
+  hlAt(cx,cy);
+}
+
+function onMove(cx,cy){
+  var g=G('_G');
+  if(g){var gw2=shelfW(orient,nH,nA),gh2=shelfH(orient,nH,nA);g.style.left=(cx-gw2/2)+'px';g.style.top=(cy-gh2/2)+'px';}
+  hlAt(cx,cy);
+}
+
+function onUp(cx,cy){
+  killGhost();
+  clearHL();
+  if(!drag)return;
+  var d=drag;drag=null;
+  if(d.type==='move'){var el=G('S'+d.shid);if(el)el.classList.remove('faded');}
+  var pos=gAt(cx,cy);
+  if(pos){
+    if(d.type==='new'){isOccShelf(pos.col,pos.row,null)?toast('Celda ocupada'):place(pos.col,pos.row);}
+    else{
+      var s=shelves.find(function(x){return x.id===d.shid;});if(!s)return;
+      if(isOccShelf(pos.col,pos.row,s.id,s.orient)){toast('Celda ocupada');renderS(s);}
+      else{s.col=pos.col;s.row=pos.row;renderS(s);pushHistory();}
+    }
+  }else if(d.type==='move'){
+    var s2=shelves.find(function(x){return x.id===d.shid;});if(s2)renderS(s2);
+  }
+}
+
+var lastHL=null;
+var _hlCells=[];
+function hlAt(cx,cy){
+  clearHL();
+  var pos=gAt(cx,cy);if(!pos)return;
+  var exc=drag&&drag.type==='move'?drag.shid:null;
+  var occupied=isOccShelf(pos.col,pos.row,exc);
+  var cells=orient==='V'?[{c:pos.col,r:pos.row},{c:pos.col,r:pos.row+1},{c:pos.col,r:pos.row+2}]:[{c:pos.col,r:pos.row},{c:pos.col+1,r:pos.row},{c:pos.col+2,r:pos.row}];
+  cells.forEach(function(p){
+    var el=document.querySelector('.gc[data-c="'+p.c+'"][data-r="'+p.r+'"]');
+    if(el){el.classList.add(occupied?'bad':'ok');_hlCells.push(el);}
+  });
+}
+function clearHL(){_hlCells.forEach(function(el){el.classList.remove('ok','bad');});_hlCells=[];}
+function gAt(cx,cy){
+  var r=G('GRID').getBoundingClientRect();
+  var col=Math.floor((cx-r.left)/CELL),row=Math.floor((cy-r.top)/CELL);
+  if(col<0||row<0)return null;
+  var _o=(drag&&drag.type==='move')?(shelves.find(function(x){return x.id===drag.shid;})||{orient:orient}).orient:orient;
+  var maxC=_o==='V'?COLS-1:COLS-3;
+  var maxR=_o==='V'?ROWS-3:ROWS-1;
+  col=Math.min(col,maxC); row=Math.min(row,maxR);
+  if(col<0||row<0)return null;
+  return{col:col,row:row};
+}
+function shelfCells(s){
+  var cells=[];
+  if(s.orient==='V'){for(var i=0;i<3;i++)cells.push({c:s.col,r:s.row+i});}
+  else{for(var i=0;i<3;i++)cells.push({c:s.col+i,r:s.row});}
+  return cells;
+}
+function isOcc(col,row,excId){
+  return shelves.some(function(s){
+    if(s.id===excId)return false;
+    return shelfCells(s).some(function(c){return c.c===col&&c.r===row;});
+  });
+}
+function isOccShelf(col,row,excId,o){
+  var oo=o||orient;
+  var newCells=oo==='V'?[{c:col,r:row},{c:col,r:row+1},{c:col,r:row+2}]:[{c:col,r:row},{c:col+1,r:row},{c:col+2,r:row}];
+  return newCells.some(function(nc){return isOcc(nc.c,nc.r,excId);});
+}
+
+/* ---- SHELF ---- */
+function place(col,row){
+  var id=++sid;
+  var num=shelves.length?Math.max.apply(null,shelves.map(function(s){return s.num;}))+1:1;
+  var s={id:id,col:col,row:row,color:color,orient:orient,huecos:nH,alturas:nA,nombre:'',num:num,cells:{}};
+  shelves.push(s);renderS(s);sel(id);
+  G('HINT').style.display='none';buildChips();pushHistory();toast('Estanteria anadida');
+}
+
+function sInner(num,lbl,o,h,a,color){
+  var accent=color||'#888';
+  var isV=o==='V';
+  var numBadge='<span class="shn" style="background:'+accent+'33;color:'+accent+';font-size:9px;padding:1px 4px;border-radius:3px;flex-shrink:0">'+num+'</span>';
+  var lblSpan=lbl?'<span class="slb" style="font-size:'+(isV?'8':'7')+'px;opacity:.7;'+(isV?'text-align:center;word-break:break-word;white-space:normal;line-height:1.2':'overflow:hidden;text-overflow:ellipsis;white-space:nowrap')+'">'+lbl+'</span>':'';
+  return '<div class="shd" style="flex-direction:'+(isV?'column':'row')+';border-left:3px solid '+accent+';height:100%;justify-content:center;align-items:center;gap:3px">'+numBadge+lblSpan+'</div>';
+}
+
+function shelfW(o,h,a){return o==='V'?CELL-4:CELL*3-4;}
+function shelfH(o,h,a){return o==='V'?CELL*3-4:CELL-4;}
+
+function renderS(s){
+  var old=G('S'+s.id);if(old)old.remove();
+  var el=document.createElement('div');
+  el.className='bshelf'+(selId===s.id?' sel':'');
+  el.id='S'+s.id;
+  var sw=shelfW(s.orient,s.huecos,s.alturas),sh=shelfH(s.orient,s.huecos,s.alturas);
+  el.style.left=(s.col*CELL+2)+'px';
+  el.style.top=(s.row*CELL+2)+'px';
+  el.style.width=sw+'px';
+  el.style.height=sh+'px';
+  el.style.background='#1e1c1a';
+  el.innerHTML=sInner(s.num,s.nombre,s.orient,s.huecos,s.alturas,s.color);
+  (function(ss){
+    var pdx=0,pdy=0,pmoved=false;
+    el.addEventListener('pointerdown',function(e){
+      if(e.button!==0&&e.pointerType==='mouse')return;
+      e.preventDefault();e.stopPropagation();
+      pdx=e.clientX;pdy=e.clientY;pmoved=false;
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointermove',function(e){
+      if(!e.buttons&&e.pointerType==='mouse')return;
+      if(pmoved)return;
+      if(Math.abs(e.clientX-pdx)>5||Math.abs(e.clientY-pdy)>5){
+        pmoved=true;
+        startDrag('move',ss.id,e.clientX,e.clientY);
+      }
+    });
+    el.addEventListener('pointerup',function(e){
+      if(!pmoved)sel(ss.id);
+      pmoved=false;
+    });
+    el.addEventListener('pointercancel',function(e){pmoved=false;});
+  })(s);
+  G('GRID').appendChild(el);
+}
+
+function sel(id){selId=id;document.querySelectorAll('.bshelf').forEach(function(el){el.classList.remove('sel');});var el=G('S'+id);if(el)el.classList.add('sel');renderProps();}
+function desel(){selId=null;document.querySelectorAll('.bshelf').forEach(function(el){el.classList.remove('sel');});renderProps();}
+
+/* ---- PROPS ---- */
+function renderProps(){
+  var s=shelves.find(function(x){return x.id===selId;});
+  if(!s){G('PROPS').innerHTML='<div style="padding:28px 16px;text-align:center;color:#4e4a45;font-size:11px;line-height:1.8"><b style="color:#8c8680;font-size:12px">Sin seleccion</b><br><br>Toca una estanteria<br>para editarla</div>';return;}
+  if(!s.cells)s.cells={};
+  var cg='';
+  for(var a=s.alturas;a>=1;a--){
+    cg+='<div style="font-size:9px;color:#4e4a45;font-family:monospace;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-weight:600">A'+a+'</div>';
+    for(var h=1;h<=s.huecos;h++){
+      var key=h+'-'+a,items=s.cells[key]||[];
+      var bg=items.length?s.color+'22':'#252220',bdr=items.length?s.color+'66':'#2e2b27';
+      cg+='<div onclick="openCell('+s.id+','+h+','+a+')" style="background:'+bg+';border:1px solid '+bdr+';border-radius:5px;padding:3px 4px;cursor:pointer;min-height:30px;display:flex;flex-direction:column;gap:2px">'
+        +'<div style="font-size:8px;color:#4e4a45;font-weight:600">H'+h+'</div>'
+        +(items.length?items.map(function(i){return '<div style="background:'+s.color+';color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+i.n+'</div>';}).join(''):'<div style="color:#4e4a45;font-size:10px;text-align:center">+</div>')
+        +'</div>';
+    }
+  }
+  G('PROPS').innerHTML='<div class="pbd">'
+    +'<div class="pg"><div class="pl">Numero</div><input class="pi" type="number" value="'+s.num+'" min="1" oninput="sp('+s.id+',\'num\',parseInt(this.value)||1)"></div>'
+    +'<div class="pg"><div class="pl">Etiqueta</div><input class="pi" type="text" value="'+s.nombre+'" placeholder="Ej: Cableado..." oninput="sp('+s.id+',\'nombre\',this.value)"></div>'
+    +'<div class="pg"><div class="pl">Huecos</div><div class="cr"><div class="cb" onclick="spn('+s.id+',\'huecos\',-1)">-</div><div class="cv" id="PH">'+s.huecos+'</div><div class="cu">H</div><div class="cb" onclick="spn('+s.id+',\'huecos\',1)">+</div></div></div>'
+    +'<div class="pg"><div class="pl">Alturas</div><div class="cr"><div class="cb" onclick="spn('+s.id+',\'alturas\',-1)">-</div><div class="cv" id="PA">'+s.alturas+'</div><div class="cu">A</div><div class="cb" onclick="spn('+s.id+',\'alturas\',1)">+</div></div></div>'
+    +'<div class="pg"><div class="pl">Orientacion</div><div class="orow"><div class="ob '+(s.orient==='V'?'on':'')+'" onclick="sp('+s.id+',\'orient\',\'V\');renderProps()">Vertical</div><div class="ob '+(s.orient==='H'?'on':'')+'" onclick="sp('+s.id+',\'orient\',\'H\');renderProps()">Horiz.</div></div></div>'
+    +'<div class="pg"><div class="pl">Color</div><div class="crow">'
+    +COLORS.map(function(c){return '<div class="sw'+(c===s.color?' on':'')+'" style="background:'+c+'" onclick="sp('+s.id+',\'color\',\''+c+'\');renderProps()"></div>';}).join('')
+    +'</div></div>'
+    +'<div class="pg"><div class="pl">Contenido</div><div style="display:grid;grid-template-columns:22px '+Array.from({length:s.huecos}).fill('1fr').join(' ')+';gap:3px;margin-top:2px">'+cg+'</div></div>'
+    +'<button class="delbtn" onclick="delS('+s.id+')">Eliminar estanteria</button>'
+    +'</div>';
+}
+
+function sp(id,k,v){var s=shelves.find(function(x){return x.id===id;});if(!s)return;s[k]=v;renderS(s);}
+function spn(id,k,d){var s=shelves.find(function(x){return x.id===id;});if(!s)return;s[k]=Math.max(1,Math.min(10,s[k]+d));renderS(s);var el=G(k==='huecos'?'PH':'PA');if(el)el.textContent=s[k];}
+function delS(id){pushHistory();shelves=shelves.filter(function(s){return s.id!==id;});var el=G('S'+id);if(el)el.remove();selId=null;renderProps();buildChips();if(!shelves.length)G('HINT').style.display='block';toast('Eliminada');}
+
+/* ---- CELL MODAL ---- */
+function openCell(sid,h,a){
+  var s=shelves.find(function(x){return x.id===sid;});if(!s)return;
+  if(!s.cells)s.cells={};
+  var key=h+'-'+a;if(!s.cells[key])s.cells[key]=[];
+  var old=G('CMOD');if(old)old.remove();
+  var ov=document.createElement('div');ov.className='cov';ov.id='CMOD';
+  ov.onclick=function(e){if(e.target===ov)closeCell();};
+  function render(){
+    var items=s.cells[key];
+    var ihtml='';
+    if(!items.length){ihtml='<div style="text-align:center;color:#4e4a45;font-size:11px;padding:14px">Celda vacia</div>';}
+    else{for(var i=0;i<items.length;i++){var it=items[i];ihtml+='<div class="iitem"><div style="flex:1;font-size:12px;color:#f0ece6;font-weight:500">'+it.n+'</div>'
+      +'<select class="isel" onchange="setEst('+sid+',\''+key+'\','+i+',this.value)"><option'+(it.e==='OK'?' selected':'')+'>OK</option><option'+(it.e==='Revision'?' selected':'')+'>Revision</option><option'+(it.e==='Roto'?' selected':'')+'>Roto</option></select>'
+      +'<div class="ix" onclick="rmItem('+sid+',\''+key+'\','+i+')">x</div></div>';}}
+    ov.innerHTML='<div class="cmod"><div class="cmhd"><div style="width:10px;height:10px;border-radius:50%;background:'+s.color+';flex-shrink:0"></div>'
+      +'<div style="font-family:Syne,sans-serif;font-size:14px;font-weight:700;color:#f0ece6;flex:1">Est.'+s.num+' H'+h+'/A'+a+'</div>'
+      +'<div class="cmx" onclick="closeCell()">x</div></div>'
+      +'<div class="ilist">'+ihtml+'</div>'
+      +'<div class="cadd"><input id="CNI" class="cai" placeholder="Nombre del aparato..."><button class="cab" onclick="addItem('+sid+',\''+key+'\','+h+','+a+')">Anadir</button></div>'
+      +'</div>';
+    var inp=G('CNI');
+    if(inp){inp.addEventListener('keydown',function(e){if(e.key==='Enter')addItem(sid,key,h,a);});setTimeout(function(){inp.focus();},40);}
+  }
+  window._CR=render;
+  document.body.appendChild(ov);render();
+}
+function closeCell(){var m=G('CMOD');if(m)m.remove();renderProps();}
+function addItem(sid,key,h,a){
+  var s=shelves.find(function(x){return x.id===sid;});if(!s)return;
+  var inp=G('CNI');var nombre=inp&&inp.value.trim();if(!nombre)return;
+  if(!s.cells[key])s.cells[key]=[];
+  s.cells[key].push({n:nombre,e:'OK'});
+  if(window._CR)window._CR();
+  autoSave();
+}
+function rmItem(sid,key,idx){var s=shelves.find(function(x){return x.id===sid;});if(!s||!s.cells[key])return;s.cells[key].splice(idx,1);if(window._CR)window._CR();autoSave();}
+function setEst(sid,key,idx,est){var s=shelves.find(function(x){return x.id===sid;});if(!s||!s.cells[key])return;s.cells[key][idx].e=est;}
+
+/* ---- MODE ---- */
+function setMode(m){
+  G('vB').classList.toggle('on',m==='B');G('vI').classList.toggle('on',m==='I');
+  G('tabB').classList.toggle('on',m==='B');G('tabI').classList.toggle('on',m==='I');
+  G('hdrB').style.display=m==='B'?'flex':'none';G('hdrI').style.display=m==='I'?'flex':'none';
+  if(m==='I'){buildWH();renderFloor();renderContent();initCat();setTimeout(function(){initDragDrop();initFloorDrop();},50);}
+}
+function goInv(){if(!shelves.length){toast('Anade estanterias primero');return;}setMode('I');}
+
+/* ---- WAREHOUSE ---- */
+function buildWH(){
+  var groups={};shelves.forEach(function(s){if(!groups[s.color])groups[s.color]=[];groups[s.color].push(s);});
+  wh={pasillos:Object.values(groups).map(function(gr,pi){
+    var pid=String.fromCharCode(65+pi),half=Math.ceil(gr.length/2);
+    return{id:pid,nombre:pnames[gr[0].color]||('Pasillo '+pid),color:gr[0].color,lados:[
+      {id:'IZQ',nombre:'Izquierda',color:gr[0].color,estanterias:gr.slice(0,half).map(toEst)},
+      {id:'DER',nombre:'Derecha',color:gr[0].color,estanterias:gr.slice(half).map(toEst)}
+    ]};
+  })};
+}
+function toEst(s){
+  if(!s.cells)s.cells={};
+  return{num:s.num,sid:s.id,nombre:s.nombre,huecos:Array.from({length:s.huecos},function(_,hi){return{num:hi+1,
+    alturas:Array.from({length:s.alturas},function(_,ai){var a=s.alturas-ai;var key=(hi+1)+'-'+a;
+      return{num:a,items:(s.cells[key]||[]).map(function(it){return{nombre:it.n,cantidad:1,estado:it.e,serie:''};})};})
+  };})};
+}
+function syncBack(){
+  if(!wh)return;
+  wh.pasillos.forEach(function(p){p.lados.forEach(function(l){l.estanterias.forEach(function(e){
+    var s=shelves.find(function(x){return e.sid?x.id===e.sid:x.num===e.num;});if(!s)return;if(!s.cells)s.cells={};
+    e.huecos.forEach(function(h){h.alturas.forEach(function(a){s.cells[h.num+'-'+a.num]=(a.items||[]).map(function(it){return{n:it.nombre,e:it.estado};});});});
+  });});});
+}
+
+/* ---- FLOOR ---- */
+function renderFloor(){
+  if(!wh)return;
+  var fd=G('FDATA');fd.innerHTML='';
+  wh.pasillos.forEach(function(p){
+    var pb=document.createElement('div');pb.style.marginBottom='10px';
+    pb.innerHTML='<div style="font-size:11px;font-weight:700;padding:6px 8px;display:flex;align-items:center;gap:6px"><div style="width:8px;height:8px;border-radius:2px;background:'+p.color+';flex-shrink:0"></div>'+p.nombre+'</div><div class="psides" id="PS'+p.id+'"></div>';
+    fd.appendChild(pb);
+    var ps=G('PS'+p.id);
+    p.lados.forEach(function(l){
+      var col=document.createElement('div');col.className='scol';
+      col.innerHTML='<div class="slabel2">'+(l.id==='IZQ'?'Izq':'Der')+'</div>';
+      var rev=[].concat(l.estanterias).reverse();
+      rev.forEach(function(e){
+        var strip=document.createElement('div');strip.className='estrip';strip.style.background=l.color;strip.dataset.pid=p.id;strip.dataset.lid=l.id;strip.dataset.num=e.num;
+        if(invSel&&invSel.pid===p.id&&invSel.lid===l.id&&invSel.num===e.num)strip.classList.add('sel');
+        var hc=e.huecos.length,ac=e.huecos[0]&&e.huecos[0].alturas.length||1;
+        var mini='';e.huecos.forEach(function(h){h.alturas.forEach(function(a){mini+='<div class="mc'+(a.items&&a.items.length?' has':'')+'"></div>';});});
+        strip.innerHTML='<span style="font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:#fff;min-width:16px">'+e.num+'</span><div class="emini" style="grid-template-columns:repeat('+hc+',1fr)">'+mini+'</div>';
+        (function(pp,ll,ee){strip.onclick=function(){invSel={pid:pp.id,lid:ll.id,num:ee.num};renderFloor();renderContent();};})(p,l,e);
+        col.appendChild(strip);
+      });
+      ps.appendChild(col);
+    });
+  });
+}
+
+/* ---- CONTENT ---- */
+function renderContent(){
+  var ct=G('CTITLE'),cs=G('CSUB'),cb=G('CBODY');
+  if(!invSel||!wh){cb.innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#9c9490;font-size:13px;flex-direction:column;gap:8px"><div style="font-family:Syne,sans-serif;font-size:15px;font-weight:700;color:#cdc8bf">Sin seleccion</div>Toca una estanteria</div>';ct.textContent='Selecciona una estanteria';cs.textContent='';renderShelfSummary(null,null);return;}
+  var p=wh.pasillos.find(function(x){return x.id===invSel.pid;});
+  var l=p&&p.lados.find(function(x){return x.id===invSel.lid;});
+  var e=l&&l.estanterias.find(function(x){return x.num===invSel.num;});
+  if(!e){cb.innerHTML='';renderShelfSummary(null,null);return;}
+  renderShelfSummary(e,l);
+  ct.textContent=p.nombre+' - '+l.nombre+' - Est.'+e.num+(e.nombre?' - '+e.nombre:'');
+  var tot=e.huecos.reduce(function(a,h){return a+h.alturas.reduce(function(b,alt){return b+(alt.items&&alt.items.length||0);},0);},0);
+  cs.textContent=tot+' items - '+e.huecos.length+' huecos x '+(e.huecos[0]&&e.huecos[0].alturas.length||0)+' alturas';
+  var cols=Math.min(e.huecos.length,4);
+  var html='<div class="cgrid" style="grid-template-columns:repeat('+cols+',1fr)">';
+  e.huecos.forEach(function(h){
+    h.alturas.forEach(function(alt){
+      var hN=h.num,aN=alt.num;html+='<div class="ccard" data-h="'+hN+'" data-a="'+aN+'" onclick="window._transit?tryPlaceTransit('+hN+','+aN+'):catItemSel?tryPlaceFromCatWithQty('+hN+','+aN+'):null" style="cursor:pointer"><div class="cref" style="color:'+l.color+'">H'+h.num+' / A'+alt.num+'</div><div>';
+      (alt.items||[]).forEach(function(it,i){
+        var ec=ECLS[it.estado]||'eOK';
+        html+='<div class="icard" draggable="true" data-h="'+h.num+'" data-a="'+alt.num+'" data-i="'+i+'"><div style="flex:1;min-width:0"><div class="icard-name">'+it.nombre+(it.cantidad>1?' <span style="background:#f0ece6;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;color:#5c5852">×'+it.cantidad+'</span>':'')+'</div>'
+          +'<div class="iacts"><div class="iact" onclick="doCopy(\''+it.nombre.replace(/'/g,"\\'")+'\')" >Copiar</div>'
+          +'<div class="iact d" onclick="doRm('+h.num+','+alt.num+','+i+')">Eliminar</div></div></div>'
+          +'<div class="ebadge '+ec+'" onclick="cycleE('+h.num+','+alt.num+','+i+')">'+it.estado+'</div></div>';
+      });
+      html+='</div>';
+      if(clip)html+='<div class="pastebar" onclick="doPaste('+h.num+','+alt.num+')">Pegar "'+clip.slice(0,20)+'"</div>';
+      html+='<div class="addrow"><input class="addinp" id="AI'+h.num+'_'+alt.num+'" placeholder="Anadir item..." onkeydown="if(event.key===\'Enter\')doAdd('+h.num+','+alt.num+')"><button class="addbtn" onclick="doAdd('+h.num+','+alt.num+')">+</button></div></div>';
+    });
+  });
+  html+='</div>';cb.innerHTML=html;
+  initDragDrop();
+  // re-init floor drop (FDATA persists)
+}
+
+function getAlt(hNum,aNum){
+  if(!wh||!invSel)return null;
+  var p=wh.pasillos.find(function(x){return x.id===invSel.pid;});
+  var l=p&&p.lados.find(function(x){return x.id===invSel.lid;});
+  var e=l&&l.estanterias.find(function(x){return x.num===invSel.num;});
+  var h=e&&e.huecos.find(function(x){return x.num===hNum;});
+  return h&&h.alturas.find(function(x){return x.num===aNum;});
+}
+function doAdd(hNum,aNum){var inp=G('AI'+hNum+'_'+aNum);var nombre=inp&&inp.value.trim();if(!nombre)return;var alt=getAlt(hNum,aNum);if(!alt)return;if(!alt.items)alt.items=[];alt.items.push({nombre:nombre,cantidad:1,estado:'OK',serie:''});syncBack();renderFloor();renderContent();doSave();toast('Item anadido');}
+function doRm(hNum,aNum,idx){var alt=getAlt(hNum,aNum);if(!alt)return;alt.items.splice(idx,1);syncBack();renderFloor();renderContent();doSave();}
+function cycleE(hNum,aNum,idx){var alt=getAlt(hNum,aNum);if(!alt||!alt.items[idx])return;var cur=ESTADOS.indexOf(alt.items[idx].estado);alt.items[idx].estado=ESTADOS[(cur+1)%3];syncBack();renderContent();autoSave();}
+function doCopy(nombre){
+  clip=nombre;
+  var bar=G('CLIPBAR');
+  if(bar){bar.style.display='flex';G('CLIPNAME').textContent=nombre.slice(0,40)+(nombre.length>40?'..':'');}
+  renderContent();toast('Copiado - toca \'Pegar\' en cualquier celda');
+}
+function cancelClip(){
+  clip=null;
+  var bar=G('CLIPBAR');if(bar)bar.style.display='none';
+  renderContent();
+}
+function doPaste(hNum,aNum){if(!clip)return;var alt=getAlt(hNum,aNum);if(!alt)return;if(!alt.items)alt.items=[];alt.items.push({nombre:clip,cantidad:1,estado:'OK',serie:''});syncBack();renderFloor();renderContent();toast('Pegado');autoSave();}
+
+/* ---- SAVE/LOAD ---- */
+function pushHistory(){
+  history=history.slice(0,histIdx+1);
+  history.push(JSON.stringify({shelves:shelves,sid:sid,pnames:pnames}));
+  if(history.length>30)history.shift();
+  histIdx=history.length-1;
+}
+function doUndo(){
+  if(histIdx<=0){toast('Nada que deshacer');return;}
+  histIdx--;
+  var st=JSON.parse(history[histIdx]);
+  shelves=st.shelves;sid=st.sid;pnames=st.pnames;
+  document.querySelectorAll('.bshelf').forEach(function(el){el.remove();});
+  shelves.forEach(function(s){renderS(s);});
+  selId=null;renderProps();buildChips();
+  if(!shelves.length)G('HINT').style.display='block';
+  else G('HINT').style.display='none';
+  toast('Deshecho');
+}
+
+function setZoom(dir){
+  var steps=[0.5,0.6,0.7,0.8,0.9,1,1.1,1.25,1.5,1.75,2];
+  var cur=steps.indexOf(zoom);
+  var next=Math.max(0,Math.min(steps.length-1,cur+dir));
+  zoom=steps[next];
+  G('GC').style.transform='scale('+zoom+')';
+  G('GC').style.width=(COLS*CELL*zoom)+'px';
+  G('GC').style.height=(ROWS*CELL*zoom)+'px';
+  G('ZLBL').textContent=Math.round(zoom*100)+'%';
+}
+
+var JBIN_ID='69b3c3c2aa77b81da9dee509';
+var JBIN_KEY='$2a$10$jZvGhEYVOP/OcBSIUmnKp.RP0Q3BzoUdG/x9HcBC6MlA.Tl8j3lUS';
+var _saveTimer=null;
+function autoSave(){
+  clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(function(){doSave();},1500);
+}
+
+function doSave(){
+  syncBack();
+  // Debug: log cells before saving
+  var cellsDebug={};
+  shelves.forEach(function(s){if(s.cells)Object.keys(s.cells).forEach(function(k){if(s.cells[k].length)cellsDebug['S'+s.num+'_'+k]=s.cells[k];});});
+  console.log('Saving cells:',JSON.stringify(cellsDebug));
+  toast('Guardando...');
+  fetch('https://api.jsonbin.io/v3/b/'+JBIN_ID,{
+    method:'PUT',
+    headers:{'Content-Type':'application/json','X-Master-Key':JBIN_KEY},
+    body:JSON.stringify({shelves:shelves,sid:sid,pnames:pnames})
+  }).then(function(r){return r.json();})
+    .then(function(d){toast(d.record?'✓ Guardado en la nube':'Error al guardar');})
+    .catch(function(){toast('Error de conexión');});
+}
+function loadState(){
+  fetch('https://api.jsonbin.io/v3/b/'+JBIN_ID+'/latest',{
+    headers:{'X-Master-Key':JBIN_KEY}
+  }).then(function(r){return r.json();})
+    .then(function(d){
+      var st=d.record;
+      if(!st||!st.shelves)return;
+      shelves=st.shelves||[];sid=st.sid||0;pnames=st.pnames||{};
+      shelves.forEach(function(s){renderS(s);});
+      if(shelves.length)G('HINT').style.display='none';
+      buildColors();
+      // Rebuild wh so inventory is ready immediately after load
+      buildWH();
+      toast('Almacen cargado');
+    })
+    .catch(function(err){console.warn('loadState:',err);});
+}
+
+/* ---- EXPORT ---- */
+function doExport(){if(!wh)buildWH();G('ETXT').value=JSON.stringify(wh,null,2);G('EMOD').style.display='flex';}
+function dlJ(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([G('ETXT').value],{type:'application/json'}));a.download='almacen.json';a.click();}
+function doClear(){if(!shelves.length)return;if(!confirm('Limpiar todo el plano?'))return;shelves=[];sid=0;selId=null;pnames={};document.querySelectorAll('.bshelf').forEach(function(el){el.remove();});renderProps();buildColors();G('HINT').style.display='block';}
+
+var toastT;
+function toast(msg){var t=G('TOAST');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('on');},2200);}
+
+
+
+/* ---- GLOBAL SEARCH ---- */
+function onGSearch(){
+  var q = G('GSEARCH').value.trim();
+  G('GSCLEAR').style.display = q ? 'block' : 'none';
+  if(q.length < 2){ G('GSRESULTS').style.display='none'; return; }
+  if(!wh) buildWH();
+  var ql = q.toLowerCase();
+  var results = [];
+  wh.pasillos.forEach(function(p){
+    p.lados.forEach(function(l){
+      l.estanterias.forEach(function(e){
+        e.huecos.forEach(function(h){
+          h.alturas.forEach(function(a){
+            (a.items||[]).forEach(function(it){
+              if(it.nombre.toLowerCase().indexOf(ql) !== -1){
+                results.push({
+                  nombre: it.nombre,
+                  estado: it.estado,
+                  cantidad: it.cantidad,
+                  loc: p.nombre+' · Est.'+e.num+(e.nombre?' ('+e.nombre+')':'')+' · H'+h.num+'/A'+a.num,
+                  pid: p.id, lid: l.id, snum: e.num
+                });
+              }
+            });
+          });
+        });
+      });
+    });
+  });
+  window._gsrResults = results;
+  var html = '';
+  if(!results.length){
+    html = '<div class="gsr-empty">Sin resultados para "'+q+'"</div>';
+  } else {
+    results.slice(0,30).forEach(function(r, idx){
+      var ecol = r.estado==='OK'?'#16a34a':r.estado==='Revision'?'#d97706':'#dc2626';
+      html += '<div class="gsr-item" onclick="goToResultIdx('+idx+')">'
+        +'<div class="gsr-name">'+r.nombre+'</div>'
+        +'<div class="gsr-loc">'+r.loc
+        +' <span style="color:'+ecol+';font-weight:700;margin-left:6px">'+r.estado+'</span>'
+        +(r.cantidad>1?' <span style="color:#9c9490">×'+r.cantidad+'</span>':'')
+        +'</div></div>';
+    });
+    if(results.length>30) html += '<div class="gsr-empty">...y '+(results.length-30)+' más</div>';
+  }
+  G('GSRESULTS').innerHTML = html;
+  G('GSRESULTS').style.display = 'block';
+}
+
+function onGSearchKey(e){
+  if(e.key==='Escape') clearGSearch();
+}
+
+function clearGSearch(){
+  G('GSEARCH').value='';
+  G('GSCLEAR').style.display='none';
+  G('GSRESULTS').style.display='none';
+}
+
+function goToResultIdx(idx){
+  var r = window._gsrResults && window._gsrResults[idx];
+  if(r) goToResult(r.pid, r.lid, r.snum);
+}
+function goToResult(pid, lid, enm){
+  invSel = {pid:pid, lid:lid, num:enm};
+  clearGSearch();
+  renderFloor();
+  renderContent();
+  var cb = G('CBODY'); if(cb) cb.scrollTop=0;
+}
+
+// Close search results when clicking outside
+document.addEventListener('click', function(e){
+  var sr = G('GSRESULTS');
+  if(sr && !sr.contains(e.target) && e.target !== G('GSEARCH')) sr.style.display='none';
+});
+
+/* ---- QTY MODAL ---- */
+var _qtyPending = null; // {hNum, aNum}
+
+function tryPlaceFromCatWithQty(hNum, aNum){
+  if(!catItemSel) return false;
+  _qtyPending = {hNum:hNum, aNum:aNum};
+  // Show qty modal
+  var old = document.getElementById('QTYMOD'); if(old) old.remove();
+  var ov = document.createElement('div');
+  ov.className = 'qty-overlay'; ov.id = 'QTYMOD';
+  ov.innerHTML = '<div class="qty-modal">'
+    +'<h3>¿Cuántas unidades?</h3>'
+    +'<p>'+catItemSel.n.slice(0,60)+(catItemSel.n.length>60?'...':'')+'<br>'
+    +'<span style="color:#e8622a">Disponibles: '+catItemSel.q+'</span></p>'
+    +'<input class="qty-input" id="QTYVAL" type="number" min="1" max="'+catItemSel.q+'" value="1">'
+    +'<div class="qty-btns">'
+    +'<button class="qty-btn cancel" onclick="closeQtyModal()">Cancelar</button>'
+    +'<button class="qty-btn ok" onclick="confirmQty()">Colocar</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+  setTimeout(function(){ var inp=G('QTYVAL'); if(inp){inp.focus();inp.select();} inp.addEventListener('keydown',function(e){if(e.key==='Enter')confirmQty();if(e.key==='Escape')closeQtyModal();}); },40);
+  return true;
+}
+
+function closeQtyModal(){
+  var m=document.getElementById('QTYMOD'); if(m) m.remove();
+  _qtyPending=null;
+}
+
+function confirmQty(){
+  var inp=G('QTYVAL'); if(!inp) return;
+  var qty = parseInt(inp.value)||1;
+  if(qty<1) qty=1;
+  var p=_qtyPending; if(!p) return;
+  closeQtyModal();
+  var alt=getAlt(p.hNum,p.aNum);
+  if(!alt) return;
+  if(!alt.items) alt.items=[];
+  alt.items.push({nombre:catItemSel.n, cantidad:qty, estado:'OK', serie:''});
+  syncBack(); renderFloor(); renderContent();
+  setTimeout(doSave,100);
+  toast(catItemSel.n.slice(0,20)+'... colocado ×'+qty);
+  catItemSel=null; hidePlacingHint(); renderCatList();
+}
+
+/* ---- SHELF SUMMARY ---- */
+function renderShelfSummary(e, l){
+  var ss = G('SSUMMARY'); if(!ss) return;
+  if(!e){ ss.style.display='none'; return; }
+  var total=0, ok=0, rev=0, rot=0, occupied=0, totalCells=0;
+  e.huecos.forEach(function(h){
+    h.alturas.forEach(function(a){
+      totalCells++;
+      if(a.items&&a.items.length){ occupied++; }
+      (a.items||[]).forEach(function(it){
+        total += (it.cantidad||1);
+        if(it.estado==='OK') ok+=(it.cantidad||1);
+        else if(it.estado==='Revision') rev+=(it.cantidad||1);
+        else if(it.estado==='Roto') rot+=(it.cantidad||1);
+      });
+    });
+  });
+  ss.style.display='block';
+  ss.innerHTML='<div class="shelf-summary">'
+    +'<div class="ss-title" style="color:'+l.color+'">Resumen · Est.'+e.num+(e.nombre?' — '+e.nombre:'')+'</div>'
+    +'<div class="ss-grid">'
+    +'<div class="ss-stat"><div class="ss-num">'+total+'</div><div class="ss-lbl">Unidades</div></div>'
+    +'<div class="ss-stat"><div class="ss-num">'+occupied+'/'+totalCells+'</div><div class="ss-lbl">Celdas ocupadas</div></div>'
+    +'<div class="ss-stat ss-ok"><div class="ss-num">'+ok+'</div><div class="ss-lbl">OK</div></div>'
+    +(rev?'<div class="ss-stat ss-rev"><div class="ss-num">'+rev+'</div><div class="ss-lbl">Revisión</div></div>':'')
+    +(rot?'<div class="ss-stat ss-rot"><div class="ss-num">'+rot+'</div><div class="ss-lbl">Roto</div></div>':'')
+    +'</div></div>';
+}
+
+/* ---- ITEM DRAG & DROP ---- */
+var _drag = null; // {hNum, aNum, idx, item, crossShelf}
+
+function initDragDrop(){
+  var cb = G('CBODY');
+  if(!cb) return;
+
+  cb.addEventListener('dragstart', function(e){
+    var card = e.target.closest('.icard[draggable]');
+    if(!card) return;
+    var hNum = parseInt(card.dataset.h);
+    var aNum = parseInt(card.dataset.a);
+    var idx  = parseInt(card.dataset.i);
+    var alt  = getAlt(hNum, aNum);
+    if(!alt || !alt.items[idx]) return;
+    _drag = {hNum:hNum, aNum:aNum, idx:idx, item: alt.items[idx]};
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', alt.items[idx].nombre);
+  });
+
+  cb.addEventListener('dragend', function(e){
+    var card = e.target.closest && e.target.closest('.icard');
+    if(card) card.classList.remove('dragging');
+  });
+
+  cb.addEventListener('dragover', function(e){
+    var ccard = e.target.closest('.ccard');
+    if(!ccard || !_drag) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    // highlight only this ccard
+    document.querySelectorAll('.ccard.drag-over').forEach(function(el){ el.classList.remove('drag-over'); });
+    ccard.classList.add('drag-over');
+  });
+
+  cb.addEventListener('dragleave', function(e){
+    var ccard = e.target.closest('.ccard');
+    if(ccard) ccard.classList.remove('drag-over');
+  });
+
+  cb.addEventListener('drop', function(e){
+    e.preventDefault();
+    document.querySelectorAll('.ccard.drag-over').forEach(function(el){ el.classList.remove('drag-over'); });
+    if(!_drag) return;
+    var ccard = e.target.closest('.ccard');
+    if(!ccard) return;
+    var toH = parseInt(ccard.dataset.h);
+    var toA = parseInt(ccard.dataset.a);
+    if(toH === _drag.hNum && toA === _drag.aNum) { _drag=null; return; } // same cell
+    var fromAlt = getAlt(_drag.hNum, _drag.aNum);
+    var toAlt   = getAlt(toH, toA);
+    if(!fromAlt || !toAlt) { _drag=null; return; }
+    // move item
+    var item = fromAlt.items.splice(_drag.idx, 1)[0];
+    if(!toAlt.items) toAlt.items = [];
+    toAlt.items.push(item);
+    _drag = null;
+    syncBack(); renderFloor(); renderContent();
+    toast('Movido a H'+toH+'/A'+toA);
+  });
+}
+
+// ── Cross-shelf drag: drag item to floor plan estantería strip ──
+function initFloorDrop(){
+  var fd = G('FDATA');
+  if(!fd) return;
+  fd.addEventListener('dragover', function(e){
+    var strip = e.target.closest('.estrip');
+    if(!strip || !_drag) return;
+    e.preventDefault();
+    document.querySelectorAll('.estrip.drag-accept').forEach(function(el){ el.classList.remove('drag-accept'); });
+    strip.classList.add('drag-accept');
+  });
+  fd.addEventListener('dragleave', function(e){
+    var strip = e.target.closest('.estrip');
+    if(strip) strip.classList.remove('drag-accept');
+  });
+  fd.addEventListener('drop', function(e){
+    e.preventDefault();
+    document.querySelectorAll('.estrip.drag-accept').forEach(function(el){ el.classList.remove('drag-accept'); });
+    if(!_drag) return;
+    var strip = e.target.closest('.estrip[data-pid]');
+    if(!strip) return;
+    // put item in transit
+    var fromAlt = getAlt(_drag.hNum, _drag.aNum);
+    if(!fromAlt) { _drag=null; return; }
+    var item = fromAlt.items.splice(_drag.idx, 1)[0];
+    _drag = null;
+    syncBack();
+    // store transit item and show bar
+    window._transit = item;
+    var tb = G('TRANSITBAR');
+    if(tb){ tb.classList.add('on'); G('TRANSITNAME').textContent = item.nombre.slice(0,40); }
+    // navigate to destination shelf
+    var pid = strip.dataset.pid, lid = strip.dataset.lid;
+    var num = parseInt(strip.dataset.num);
+    invSel = {pid:pid, lid:lid, num:num};
+    renderFloor(); renderContent();
+    toast('Elige celda destino');
+  });
+}
+
+function cancelTransit(){
+  if(window._transit) {
+    // put item back? No - just discard for safety, user can re-add
+    window._transit = null;
+  }
+  var tb = G('TRANSITBAR'); if(tb) tb.classList.remove('on');
+  renderContent();
+}
+
+// Hook transit into ccard click / tryPlaceFromCatWithQty
+function tryPlaceTransit(hNum, aNum){
+  if(!window._transit) return false;
+  var alt = getAlt(hNum, aNum);
+  if(!alt) return false;
+  if(!alt.items) alt.items = [];
+  alt.items.push(window._transit);
+  window._transit = null;
+  var tb = G('TRANSITBAR'); if(tb) tb.classList.remove('on');
+  syncBack(); renderFloor(); renderContent();
+  toast('Colocado en H'+hNum+'/A'+aNum);
+  return true;
+}
+
+
+/* ---- CATALOG ---- */
+var catGrpSel = null;
+var catItemSel = null;
+
+var CAT_GROUPS = [];
+function initCat(){
+  var gs = {};
+  CATALOG.forEach(function(it){ if(!gs[it.g]) gs[it.g]=0; gs[it.g]++; });
+  CAT_GROUPS = Object.keys(gs).sort();
+  var html = '<div class="catGrp'+(catGrpSel===null?' on':'')+'" onclick="setCatGrp(null)">Todo</div>';
+  CAT_GROUPS.forEach(function(g){
+    html += '<div class="catGrp'+(catGrpSel===g?' on':'')+'" onclick="setCatGrp(\''+g+'\')">'+g+'</div>';
+  });
+  G('catGrps').innerHTML = html;
+  renderCatList();
+}
+
+function setCatGrp(g){ catGrpSel=g; initCat(); }
+
+function filterCat(){ renderCatList(); }
+
+function getPlacedNames(){
+  var names={};
+  if(!wh) return names;
+  wh.pasillos.forEach(function(p){p.lados.forEach(function(l){l.estanterias.forEach(function(e){
+    e.huecos.forEach(function(h){h.alturas.forEach(function(a){
+      (a.items||[]).forEach(function(it){ names[it.nombre]=true; });
+    });});
+  });});});
+  return names;
+}
+
+function renderCatList(){
+  var q = (G('catQ').value||'').toLowerCase().trim();
+  var placed = getPlacedNames();
+  var items = CATALOG.filter(function(it){
+    if(catGrpSel && it.g !== catGrpSel) return false;
+    if(q && it.n.toLowerCase().indexOf(q)===-1) return false;
+    return true;
+  });
+  // Store filtered list globally so onclick can reference by index
+  window._catFiltered = items;
+  var html='';
+  items.forEach(function(it, idx){
+    var isSel = catItemSel && catItemSel.n===it.n;
+    var isPlaced = !!placed[it.n];
+    html+='<div class="catItem'+(isSel?' selected':'')+(isPlaced?' placed':'')+'" onclick="selectCatIdx('+idx+')">'
+      +'<div class="catItem-name">'+it.n+'</div>'
+      +'<div class="catItem-qty">×'+it.q+'</div>'
+      +'</div>';
+  });
+  if(!items.length) html='<div style="padding:20px;text-align:center;color:#9c9490;font-size:11px">Sin resultados</div>';
+  G('catList').innerHTML=html;
+}
+
+function selectCatItem(it){
+  if(catItemSel && catItemSel.n===it.n){ catItemSel=null; hidePlacingHint(); }
+  else{ catItemSel=it; showPlacingHint('Selecciona celda para: '+it.n.slice(0,35)); }
+  renderCatList();
+}
+function selectCatIdx(idx){
+  var it = window._catFiltered && window._catFiltered[idx];
+  if(it) selectCatItem(it);
+}
+
+function showPlacingHint(msg){ var h=G('placingHint');h.textContent=msg;h.classList.add('on');document.body.classList.add('placing'); }
+function hidePlacingHint(){ G('placingHint').classList.remove('on');document.body.classList.remove('placing'); }
+
+function toggleCat(){
+  var p=G('catPanel'),b=G('catToggleBtn');
+  p.classList.toggle('hidden');
+  b.textContent = p.classList.contains('hidden') ? '▶' : '◀';
+  b.style.left = p.classList.contains('hidden') ? '0' : '280px';
+}
+
+// Intercept cell click when placing
+function tryPlaceFromCat(hNum, aNum){
+  if(!catItemSel) return false;
+  var alt=getAlt(hNum,aNum);
+  if(!alt) return false;
+  if(!alt.items) alt.items=[];
+  alt.items.push({nombre:catItemSel.n, cantidad:catItemSel.q, estado:'OK', serie:''});
+  syncBack();
+  renderFloor();
+  renderContent();
+  doSave();
+  toast('\'' + catItemSel.n.slice(0,25) + '...' + '\' colocado');
+  catItemSel=null;
+  hidePlacingHint();
+  renderCatList();
+  return true;
+}
+
+var CATALOG=[{"n": "Adaptador Trifásico Alextek Cetac 32A > Puntas Libres", "q": 6, "g": "INFRA"}, {"n": "Altavoz Autoamplificado Meyer Sound LINA", "q": 36, "g": "SPEAKERS"}, {"n": "Altavoz Pasivo Audibax Java 4 TW Blanco", "q": 12, "g": "SPEAKERS"}, {"n": "Amplificador de Antena UHF Shure UA834WB", "q": 16, "g": "UHF"}, {"n": "Antena Direccional Activa UHF Lectrosonics ALP650", "q": 2, "g": "UHF"}, {"n": "Antena Direccional Activa UHF Shure UA870WB", "q": 12, "g": "UHF"}, {"n": "Antena Helicoidal Pasiva UHF RF Venue CP Beam", "q": 2, "g": "UHF"}, {"n": "Antena Helicoidal Pasiva UHF Sennheiser A5000-CPWB", "q": 1, "g": "UHF"}, {"n": "Antena Omni 1/2 Wave UHF Shure UA8 J5E", "q": 18, "g": "UHF"}, {"n": "AudioTechnica ATH-M35", "q": 2, "g": "HEADPHONES"}, {"n": "Auriculares Sennheiser HD-25 1-II", "q": 2, "g": "HEADPHONES"}, {"n": "Bobina Cable Altavoz Blanco (2x1.5mm 100mts)", "q": -1, "g": "INFRA"}, {"n": "Bose L1 Pro16 Bass Module", "q": 16, "g": "SPEAKERS"}, {"n": "Bose L1 Pro16 Extension Bar", "q": 16, "g": "SPEAKERS"}, {"n": "Bose L1 Pro16 Mid-High Array", "q": 16, "g": "SPEAKERS"}, {"n": "Cabina Doble Traduccion AudiPack 9300 Series", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Cable Fibra Óptica SC-LC 02mts", "q": 50, "g": "INFRA"}, {"n": "Cable IEC F > Shucko M 10A 03mts", "q": 103, "g": "INFRA"}, {"n": "Cable Shure EAC64", "q": 6, "g": "UHF"}, {"n": "Cable USB 2.0 A/B 02mts", "q": 25, "g": "INFRA"}, {"n": "Caja de Inyección Activa Behringer Ultra-DI", "q": 34, "g": "WIRED"}, {"n": "Caja de Inyección Activa BSS AR133", "q": 33, "g": "WIRED"}, {"n": "Cápsula Shure R185B", "q": 32, "g": "WIRED"}, {"n": "Carro Pinanson XLR 04ch 50mts", "q": 20, "g": "SNAKES"}, {"n": "Cubilete Universal Reportero (Cuadrado)", "q": 2, "g": "UHF"}, {"n": "Distribuidor Altair DA-410: 4 In / 10 Out", "q": 11, "g": "SIGNAL PROCESSING"}, {"n": "Extractor de Aire Audipack Silent Series", "q": 4, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Hollyland Lark Max / Cable Minijack TRS", "q": 6, "g": "UHF"}, {"n": "Hollyland Lark Max / Cable USBC - Lightning", "q": 6, "g": "UHF"}, {"n": "Hollyland Lark Max / Cable USBC - USBA", "q": 6, "g": "UHF"}, {"n": "Hollyland Lark Max / Cable USBC - USBC", "q": 6, "g": "UHF"}, {"n": "Hollyland Lark Max / Charging Case", "q": 6, "g": "UHF"}, {"n": "Hollyland Lark Max / Clip Magnético", "q": 12, "g": "UHF"}, {"n": "Hollyland Lark Max / Micrófono Lavalier", "q": 12, "g": "UHF"}, {"n": "Hollyland Lark Max / Pinza Cocodrilo", "q": 12, "g": "UHF"}, {"n": "Hollyland Lark Max / Receptor Dual", "q": 7, "g": "UHF"}, {"n": "Hollyland Lark Max / Transmisor Petaca", "q": 12, "g": "UHF"}, {"n": "Hollyland Lark Max / WindShield Lavalier", "q": 12, "g": "UHF"}, {"n": "Hollyland Lark Max / WindShield Transmisor", "q": 12, "g": "UHF"}, {"n": "Interface USB Roland Octa-Capture", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "K&M M10 Adapter Sleeve", "q": 27, "g": "STANDS"}, {"n": "Limitador Glove SPX One 2 Pro", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "Mesa Analógica Soundcraft EPM6: 06 In / 02 Out", "q": 8, "g": "MIXERS"}, {"n": "Microaltavoz con PTT de mano Kenwood Protalk", "q": 18, "g": "COMMS"}, {"n": "Micrófono DPA 2028", "q": 1, "g": "WIRED"}, {"n": "Micrófono Homologado Glove SPX One 2 Pro", "q": 2, "g": "SIGNAL PROCESSING"}, {"n": "Panel Iluminación Rack Work D19L", "q": 6, "g": "I/O RACKS"}, {"n": "Patch Pasivo Escenario Klotz 19ML32VE (32ch)", "q": 2, "g": "I/O RACKS"}, {"n": "PeliCase AKG C414", "q": 2, "g": "WIRED"}, {"n": "PeliCase Digico Little Blue Box", "q": 1, "g": "I/O RACKS"}, {"n": "PeliCase Hollyland Lark Max", "q": 6, "g": "UHF"}, {"n": "PeliCase Mesa Analogica", "q": 12, "g": "MIXERS"}, {"n": "PeliCase Polycom VoiceStation 300", "q": 1, "g": "COMMS"}, {"n": "PeliCase Roland Octa-Capture", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "PeliCase Router Mikrotik", "q": 15, "g": "MIXERS"}, {"n": "PeliCase Sistema De Reproduccion", "q": 14, "g": "SIGNAL PROCESSING"}, {"n": "Pie Jirafa K&M Largo", "q": 107, "g": "STANDS"}, {"n": "Pinza DPA DC4099 (Bateria y Percusion)", "q": 4, "g": "WIRED"}, {"n": "Pulpo Klotz FOH/MON 32ch 06mts", "q": 4, "g": "I/O RACKS"}, {"n": "RoadCase HMA 150mts", "q": 2, "g": "SNAKES"}, {"n": "RoadCase Infra KLOTZ (Provisional)", "q": 2, "g": "SNAKES"}, {"n": "RoadCase L Mixto Audio (Señal + Power 16A)", "q": 18, "g": "INFRA"}, {"n": "RoadCase MADI-FIBER 150mts", "q": 1, "g": "SNAKES"}, {"n": "RoadCase Rigging Sonido", "q": 4, "g": "RIGGING"}, {"n": "Sistema Intercom UHF Altair WBS210 (04 Belpacks)", "q": 1, "g": "COMMS"}, {"n": "Snake Digital RJ45 Cat6 50mts (Datos)", "q": 6, "g": "SNAKES"}, {"n": "Soporte Magnético 4080 DPA DMM0016", "q": 3, "g": "UHF"}, {"n": "StageBox Behringer SD-16: 16 In - 08 Out", "q": 6, "g": "I/O RACKS"}, {"n": "Switch Netgear M4250 10G2F (AVB)", "q": 2, "g": "MIXERS"}, {"n": "Switch TP-Link TL-SG108", "q": 15, "g": "UHF"}, {"n": "Tarjeta Behringer X-USB Audio Interface", "q": 6, "g": "MIXERS"}, {"n": "Tarjeta Digico D2-Rack 8 OUT Analog XLR", "q": 2, "g": "I/O RACKS"}, {"n": "Top Grid MG-LINA/750-LFC", "q": 6, "g": "RIGGING"}, {"n": "TourCase L1 Pro16 (02 uds)", "q": 8, "g": "SPEAKERS"}, {"n": "TourCase LINA U-Bracket (02 uds)", "q": 9, "g": "RIGGING"}, {"n": "TourCase MG-LINA/750-LFC (02 uds)", "q": 3, "g": "RIGGING"}, {"n": "TourCase MYA-LINA (02 uds)", "q": 4, "g": "RIGGING"}, {"n": "TourCase MYA-UPQ (02 uds)", "q": 4, "g": "RIGGING"}, {"n": "TourCase Patch Klotz 32ch", "q": 2, "g": "I/O RACKS"}, {"n": "TourCase SPXONE2", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "TourCase UHF + Hospital (16 uds)", "q": 14, "g": "UHF"}, {"n": "Transport Bag Jirafa K&M (06 uds)", "q": 10, "g": "STANDS"}, {"n": "Tripode Altavoz K&M", "q": 26, "g": "STANDS"}, {"n": "Viga Lifting Point Work AWS502", "q": 2, "g": "RIGGING"}, {"n": "Walkie Motorola GP 240", "q": 66, "g": "COMMS"}, {"n": "Adaptador DPA DAD6021 (Microdot - Lectrosonics)", "q": 11, "g": "UHF"}, {"n": "Altavoz Autoamplificado Meyer Sound UPQ-D1", "q": 8, "g": "SPEAKERS"}, {"n": "Altavoz Pasivo JBL Control 1 Pro Blanco", "q": 16, "g": "SPEAKERS"}, {"n": "Amplificador de Cascos Behringer Miniamp 800", "q": 3, "g": "HEADPHONES"}, {"n": "Antena Dipolo Pasiva UHF RF Venue Diversity Fin", "q": 7, "g": "UHF"}, {"n": "Antena Direccional Pasiva UHF Sennheiser A2003WB", "q": 2, "g": "UHF"}, {"n": "Antena Omni 1/2 Wave UHF Lectrosonics A500RA-22", "q": 2, "g": "UHF"}, {"n": "Antena Omni 1/2 Wave UHF Shure UA8 G56", "q": 16, "g": "UHF"}, {"n": "Antena Omni Sennheiser A 1031-U WB", "q": 1, "g": "UHF"}, {"n": "Audioconferencia Polycom VoiceStation 300", "q": 1, "g": "COMMS"}, {"n": "Auricular Desechable Botón Alamar AL230 Blanco", "q": 50, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Bobina Cable Altavoz Negro (2x1.5mm 100mts)", "q": 2, "g": "INFRA"}, {"n": "Bose B1 Bass Module", "q": 8, "g": "SPEAKERS"}, {"n": "Cable Cetac 32A Trifásico Alextek 10mts", "q": 6, "g": "INFRA"}, {"n": "Cable de Diadema Countryman a Shure ADX1M", "q": 23, "g": "UHF"}, {"n": "Cable Fibra Optica SC 04ch 10mts", "q": 4, "g": "INFRA"}, {"n": "Cable IEC MF 10A 0.3mts (SAI Outlet)", "q": 12, "g": "INFRA"}, {"n": "Cable Minijack 1/8\" TRS MF 7.5mts", "q": 5, "g": "INFRA"}, {"n": "Cable RJ45 Cat5E Datos 0.5mts", "q": 37, "g": "INFRA"}, {"n": "Caja de Inyección Pasiva Stereo Palmer PLI 04USB", "q": 12, "g": "WIRED"}, {"n": "Cápsula Shure R184B", "q": 4, "g": "WIRED"}, {"n": "Carro Pinanson XLR 08ch 50mts", "q": 16, "g": "SNAKES"}, {"n": "Combinador Activo UHF Shure AD8CE", "q": 2, "g": "UHF"}, {"n": "Conector Salida 4x4 MiniAmp", "q": 11, "g": "SPEAKERS"}, {"n": "Conmutador Optogate PB-05E", "q": 1, "g": "WIRED"}, {"n": "Distribuidor Pinanson AudioLink 4x4: 4 In / 16 Out", "q": 4, "g": "SIGNAL PROCESSING"}, {"n": "Ecualizador Gráfico Klark Teknik DN-370", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "Emisor de Infoport UHF Sennheiser SR2020", "q": 1, "g": "UHF"}, {"n": "Garra Triton Blue Negra 38-52mm 150kg", "q": 150, "g": "RIGGING"}, {"n": "In-Ear XVive T9", "q": 8, "g": "UHF"}, {"n": "Interface USB Tascam US 4x4", "q": 11, "g": "SIGNAL PROCESSING"}, {"n": "JVC HA-S180-B", "q": 2, "g": "HEADPHONES"}, {"n": "Mesa Analógica Yamaha MG10XU: 10 In / 02 Out", "q": 1, "g": "MIXERS"}, {"n": "Mesa Extension + Pata Estabilizadora Cabina Triple", "q": 1, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Meyer Sound PAS-M20 Adapter Sleeve", "q": 44, "g": "STANDS"}, {"n": "Microaltavoz con PTT de mano MDPMMN4021", "q": 119, "g": "COMMS"}, {"n": "Micrófono de Superficie DPA BLM4060", "q": 3, "g": "WIRED"}, {"n": "Micrófono DPA 4055", "q": 1, "g": "WIRED"}, {"n": "Ordenador Portátil Sonido", "q": 12, "g": "SIGNAL PROCESSING"}, {"n": "PeliCase Palmer Monicon Passive Controller", "q": 13, "g": "SIGNAL PROCESSING"}, {"n": "PeliCase Telefono Analogico (02 uds)", "q": 4, "g": "COMMS"}, {"n": "Pértiga para Micrófono Grabación Rode", "q": 2, "g": "WIRED"}, {"n": "Pie Recto K&M (Base Redonda)", "q": 8, "g": "STANDS"}, {"n": "Pin Lina/750-LFC", "q": 303, "g": "SPEAKERS"}, {"n": "Pinza DPA CC4099 (Cello)", "q": 4, "g": "WIRED"}, {"n": "Preamplificador DBX 376 Tube", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "Receptor Radioenlace VHF Wavenet RS-2000", "q": 4, "g": "UHF"}, {"n": "RoadCase M Mixto Audio (Señal + Power 16A)", "q": 4, "g": "INFRA"}, {"n": "RoadCase MADI-CAT6 75mts", "q": 7, "g": "SNAKES"}, {"n": "Router Mikrotik + Fibra", "q": 15, "g": "MIXERS"}, {"n": "Sistema Intercom UHF Hollyland C1-8SHUB (08 Belpacks)", "q": 12, "g": "COMMS"}, {"n": "Snake Digital RJ45 Cat6 75mts (Datos)", "q": 6, "g": "SNAKES"}, {"n": "Soporte de Petaca para Cámara ENG", "q": 2, "g": "UHF"}, {"n": "Swich Port Linksys 16 Salidas", "q": 1, "g": "UHF"}, {"n": "Tarjeta Digico DMI-AMM", "q": 6, "g": "MIXERS"}, {"n": "Torre PA Elevadora Work WTS708 700Kg 08mts", "q": 2, "g": "RIGGING"}, {"n": "TourCase  Shure  R185 (02 uds)", "q": 16, "g": "WIRED"}, {"n": "TourCase 01V96", "q": 2, "g": "MIXERS"}, {"n": "TourCase Bosch DCN Diss (10 uds)", "q": 3, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "TourCase Jirafa K&M (12 uds)", "q": 6, "g": "STANDS"}, {"n": "TourCase MAUI 5 Go W (02 uds)", "q": 0, "g": "SPEAKERS"}, {"n": "Tripode Altavoz K&M (Base Redonda)", "q": 36, "g": "STANDS"}, {"n": "U-Bracket Meyer Sound MUB-X20", "q": 40, "g": "RIGGING"}, {"n": "Unidad de Delegado Bosch DCN Discussion L", "q": 27, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Walkie Kenwood Protalk TK3301", "q": 17, "g": "COMMS"}, {"n": "Adaptador DPA DAD6003 (Microdot - Lemo)", "q": 50, "g": "UHF"}, {"n": "Adaptador FF BNC UHF 50ohm", "q": 32, "g": "UHF"}, {"n": "Adaptador Fibra Optica FF SC", "q": 96, "g": "INFRA"}, {"n": "Altavoz Autoamplificado Meyer Sound ULTRA-X40", "q": 38, "g": "SPEAKERS"}, {"n": "Altavoz Autoamplificado Ortizan X10 Wireless IPX7", "q": 12, "g": "SPEAKERS"}, {"n": "Altavoz Pasivo JBL Control 24C Micro Blanco", "q": 4, "g": "SPEAKERS"}, {"n": "Antena Direccional Activa UHF Sennheiser AD3700WB", "q": 2, "g": "UHF"}, {"n": "Auricular Reutilizable Diadema Alamar AL300", "q": 271, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Barra Distanciadora K&M Vaso Std", "q": 0, "g": "STANDS"}, {"n": "Bose L1 Model II Cilindrical Ratiator Bottom", "q": 8, "g": "SPEAKERS"}, {"n": "Boton Presidente Bosch DCN DISC", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Cable Altavoz Blanco 03mts (2x1.5mm)", "q": 0, "g": "INFRA"}, {"n": "Cable Cetac 32A Trifásico Alextek 20mts", "q": 12, "g": "INFRA"}, {"n": "Cable de Diadema Countryman a Lectrosonics", "q": 20, "g": "UHF"}, {"n": "Cable IEC MF 10A 0.5mts (SAI Outlet)", "q": 30, "g": "INFRA"}, {"n": "Cable Minijack 1/8\" TRS M > 03 Minijack TS F  0.10mts", "q": 5, "g": "INFRA"}, {"n": "Cable MiniJack con rosca a MiniJack", "q": 2, "g": "UHF"}, {"n": "Cable RJ45 Cat5E Datos 01mts", "q": 18, "g": "INFRA"}, {"n": "Cajetín Pronomic Netcore SB-3F RJ45", "q": 2, "g": "SNAKES"}, {"n": "Cápsula AKG CK31", "q": 18, "g": "WIRED"}, {"n": "Combinador Activo UHF Sennheiser AC 3000", "q": 1, "g": "UHF"}, {"n": "Distribuidor Prensa Altair RP-240: 04 In / 40 Out", "q": 8, "g": "SIGNAL PROCESSING"}, {"n": "Ecualizador Gráfico Klark Teknik DN-360", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "Fuente Alimentación Lectrosonic 15V 1.66A", "q": 5, "g": "UHF"}, {"n": "Híbrido RDSI Dual AEQ Phoenix Stratos", "q": 2, "g": "COMMS"}, {"n": "Interface USB Tascam UH-7000", "q": 2, "g": "SIGNAL PROCESSING"}, {"n": "Llave Allen Cabina", "q": 6, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Mesa Analógica Behringer Xenyx X1204USB: 12 In / 04 Out", "q": 1, "g": "MIXERS"}, {"n": "Meyer Sound PAS-M8 Adapter Sleeve", "q": 38, "g": "STANDS"}, {"n": "Microauricular con PTT solapa Kenwood Protalk", "q": 24, "g": "COMMS"}, {"n": "Micrófono de Superficie AKG C547 BL", "q": 1, "g": "WIRED"}, {"n": "Micrófono DPA 4099Hi", "q": 5, "g": "WIRED"}, {"n": "Pantalla Antivientos Sennheiser MZW 60-1", "q": 2, "g": "WIRED"}, {"n": "PeliCase AKG GN30 (06 uds)", "q": 3, "g": "WIRED"}, {"n": "PeliCase Digico UBMadi", "q": 2, "g": "SIGNAL PROCESSING"}, {"n": "PeliCase Walkies Kenwood (08 uds)", "q": 1, "g": "COMMS"}, {"n": "Pie Jirafa K&M Pequeño", "q": 16, "g": "STANDS"}, {"n": "Previo Digital Behringer Ultragain Pro8", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "Procesador BSS Omnidrive Compact Plus FDS-366T", "q": 2, "g": "SIGNAL PROCESSING"}, {"n": "Pulsador Semáforo Doble XLR", "q": 2, "g": "WIRED"}, {"n": "Receptor UHF XVive U4", "q": 8, "g": "UHF"}, {"n": "Receptor Venue Lectrosonics 06ch (563-588 MHz)", "q": 2, "g": "UHF"}, {"n": "RoadCase MADI-BNC 70mts", "q": 2, "g": "SNAKES"}, {"n": "RoadCase S Mixto Audio (Señal + Power 16A)", "q": 6, "g": "INFRA"}, {"n": "Router WIFI", "q": 2, "g": "MIXERS"}, {"n": "Safety con Argolla Sercable 01mts", "q": 62, "g": "RIGGING"}, {"n": "Sistema Intercom UHF Hollyland C1-6S (06 Belpacks)", "q": 0, "g": "COMMS"}, {"n": "Sistema UHF Auricular Fonestar FA-8060", "q": 2, "g": "HEADPHONES"}, {"n": "Snake Digital Ethercon Cat5E 70mts (AES50)", "q": 7, "g": "SNAKES"}, {"n": "Soporte Mesa Auricular NewBee NB-Z1", "q": 2, "g": "HEADPHONES"}, {"n": "Splitter Antena UHF Shure AXT630 (470 a 698 MHz)", "q": 4, "g": "UHF"}, {"n": "Splitter Antena UHF WideBand (Shure UA845WB/RF Venue)", "q": 9, "g": "UHF"}, {"n": "StageBox Digico D-Rack: 32 In / 16 Out", "q": 6, "g": "I/O RACKS"}, {"n": "Tarjeta Digico DMI-MADI-B", "q": 2, "g": "MIXERS"}, {"n": "TourCase 900-LFC", "q": 6, "g": "SPEAKERS"}, {"n": "TourCase Bosch LBB 4540/08 (50 uds)", "q": 4, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "TourCase SD-Rack", "q": 2, "g": "I/O RACKS"}, {"n": "TourCase Tripodes K&M (06 uds)", "q": 3, "g": "STANDS"}, {"n": "TourCase X32 Compact", "q": 4, "g": "MIXERS"}, {"n": "Transmisor Radioenlace VHF Wavenet BS-2000", "q": 1, "g": "UHF"}, {"n": "Transmisor Shure PSM ADTDE 02ch (G56 470-636MHz)", "q": 4, "g": "UHF"}, {"n": "U-Bracket Meyer Sound MUB-X40", "q": 38, "g": "RIGGING"}, {"n": "UPS Salicru SPS Advance RT 1350w Rack", "q": 12, "g": "I/O RACKS"}, {"n": "Vaso Meyer Sound Rosca M8", "q": 22, "g": "SPEAKERS"}, {"n": "Adaptador DPA DAD6010 (Microdot - Shure TFA4)", "q": 26, "g": "UHF"}, {"n": "Adaptador Trifásico Alextek Cetac 63A > Puntas Libres", "q": 6, "g": "INFRA"}, {"n": "Altavoz Autoamplificado Meyer Sound ULTRA-X20", "q": 40, "g": "SPEAKERS"}, {"n": "Altavoz Pasivo LD Systems SAT242 G2 Blanco", "q": 19, "g": "SPEAKERS"}, {"n": "Altavoz Pasivo Vietta DO-2W", "q": 2, "g": "SPEAKERS"}, {"n": "Antena Direccional Yagui VHF Wavenet YG150-3", "q": 5, "g": "UHF"}, {"n": "Auricular Desechable Botón Alamar AL230 Negro", "q": 240, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Auriculares FA-8060R", "q": 3, "g": "HEADPHONES"}, {"n": "Barra Distanciadora Meyer Sound MPK-Pole M20", "q": 21, "g": "STANDS"}, {"n": "Bose L1 Model II Cilindrical Ratiator Top", "q": 8, "g": "SPEAKERS"}, {"n": "Cable Altavoz Blanco 05mts (2x1.5mm)", "q": 0, "g": "INFRA"}, {"n": "Cable BNC UHF 50ohm RG58 01mts", "q": 48, "g": "UHF"}, {"n": "Cable de Diadema Countryman a Shure UR1", "q": 28, "g": "UHF"}, {"n": "Cable Ethercom Cat5E Madi 10mts", "q": 4, "g": "INFRA"}, {"n": "Cable Minijack 1/8\" TRS > 02 XLR M 03mts", "q": 39, "g": "INFRA"}, {"n": "Cable MiniJack con rosca a XLR M", "q": 2, "g": "UHF"}, {"n": "Cable RJ45 Cat5E Datos 02mts", "q": 11, "g": "INFRA"}, {"n": "Cajetín Pronomic Netcore SB-3M RJ45", "q": 3, "g": "SNAKES"}, {"n": "Central Intercom Alámbrica Altair EF-200 Doble Canal", "q": 2, "g": "COMMS"}, {"n": "Conversor IEC > Tripleta Shucko 10A 01mts (SAI Outlet)", "q": 2, "g": "INFRA"}, {"n": "Cordino Negro 15mts", "q": 50, "g": "RIGGING"}, {"n": "Cuello Micrófono Shure MX418 (45cm)", "q": 32, "g": "WIRED"}, {"n": "Distribuidor Prensa Altair DA-410 Pasivo: 4 In / 32 Out", "q": 3, "g": "SIGNAL PROCESSING"}, {"n": "Emisor de Petaca UHF Lectrosonics SMBD/E01 (50mW)", "q": 6, "g": "UHF"}, {"n": "Híbrido Analógico Mono ClearOne Interact Pro", "q": 1, "g": "COMMS"}, {"n": "Interface USB Focusrite Scarlett 2i4 3th Gen", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "K&M Screw-On Adapter Sleeve", "q": 38, "g": "STANDS"}, {"n": "Lampara Led Sobremesa + Transformador USB", "q": 4, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "LD Systems MAUI 5 Go White Battery", "q": 23, "g": "SPEAKERS"}, {"n": "Mesa Analógica Yamaha MG12: 12 In / 04 Out", "q": 1, "g": "MIXERS"}, {"n": "Microauricular con PTT solapa Telecom JD23", "q": 96, "g": "COMMS"}, {"n": "Micrófono Shure SM57", "q": 2, "g": "WIRED"}, {"n": "PeliCase Intercom Alámbrica Altair", "q": 1, "g": "COMMS"}, {"n": "PeliCase Semáforo Doble XLR", "q": 2, "g": "WIRED"}, {"n": "PeliCase Sonido (Multiusos)", "q": 6, "g": "SIGNAL PROCESSING"}, {"n": "PeliCase XVive U4 R2 BL", "q": 4, "g": "UHF"}, {"n": "Pie Recto Gravity MS23 XLRB (Base Redonda)", "q": 8, "g": "STANDS"}, {"n": "Pinza DPA BC4099 (Contrabajo)", "q": 2, "g": "WIRED"}, {"n": "Preamplificador Behringer Shark FBQ100", "q": 3, "g": "SIGNAL PROCESSING"}, {"n": "Pulsador Semáforo XLR", "q": 7, "g": "WIRED"}, {"n": "Receptor de Petaca Shure PSM ADXR G56 + Baterias", "q": 8, "g": "UHF"}, {"n": "Receptor Shure AD4QEA 04ch (G56 470-636 MHz)", "q": 12, "g": "UHF"}, {"n": "Receptor Shure UHF-R UR4D 02ch (J5E 578-638 MHz)", "q": 14, "g": "UHF"}, {"n": "RoadCase L Infra Audio (Scpx + 32A Trif)", "q": 6, "g": "INFRA"}, {"n": "Sennheiser Stereo Transmitter SR 3256", "q": 2, "g": "UHF"}, {"n": "Snake Digital MADI-BNC 70mts", "q": 3, "g": "SNAKES"}, {"n": "StageBox Digico D2Rack CAT5: 48 In / 32 Out", "q": 1, "g": "I/O RACKS"}, {"n": "Suspensor Sennheiser MZS 20-1", "q": 2, "g": "WIRED"}, {"n": "Tarjeta Digico DMI-MADI-C", "q": 4, "g": "MIXERS"}, {"n": "TourCase Behringer X32", "q": 2, "g": "MIXERS"}, {"n": "TourCase MJF-208 (02 uds)", "q": 4, "g": "SPEAKERS"}, {"n": "TourCase Radiador Bosch 25 W", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "TourCase SD-Mini-Rack", "q": 2, "g": "I/O RACKS"}, {"n": "TourCase Tripode K&M Base Redonda (04 uds)", "q": 8, "g": "STANDS"}, {"n": "U-Bracket Meyer Sound MUB-LINA", "q": 19, "g": "RIGGING"}, {"n": "UPS Salicru SPS3000V Advance", "q": 3, "g": "I/O RACKS"}, {"n": "Altavoz Autoamplificado Meyer Sound UPM-1P", "q": 0, "g": "SPEAKERS"}, {"n": "Altavoz Pasivo Soundtube FP6020", "q": 1, "g": "SPEAKERS"}, {"n": "Antena Omni 1/2 Wave ShowLink AD610", "q": 2, "g": "UHF"}, {"n": "Antena Omnidireccional VHF Wavenet CL-150", "q": 1, "g": "UHF"}, {"n": "Auricular para Pupitre de Interprete Bosch LBB 3443", "q": 8, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Bose L1 Model II Power Stand", "q": 8, "g": "SPEAKERS"}, {"n": "Cable Altavoz Blanco 10mts (2x1.5mm)", "q": 0, "g": "INFRA"}, {"n": "Cable BNC UHF 50ohm RG58 0.3mts", "q": 23, "g": "UHF"}, {"n": "Cable Cetac 63A Trifásico Alextek 10mts", "q": 3, "g": "INFRA"}, {"n": "Cable Ethercom Cat5E Madi 20mts", "q": 3, "g": "INFRA"}, {"n": "Cable Minijack 1/8\" TRS > 02 Jack 1/4\" TS  03mts", "q": 40, "g": "INFRA"}, {"n": "Cajetín Escenario 16ch XLR Litton", "q": 5, "g": "SNAKES"}, {"n": "Central Intercom Alámbrica Altair ES-200  Doble Canal (Sobremesa)", "q": 1, "g": "COMMS"}, {"n": "Conversor IEC > Shucko F 10A 01mts (SAI Outlet)", "q": 40, "g": "INFRA"}, {"n": "Cuello Micrófono Shure MX412 (30cm)", "q": 32, "g": "WIRED"}, {"n": "Diadema Countryman H6 W6 Omni", "q": 34, "g": "UHF"}, {"n": "Diadema DPA 6066 CORE Omni", "q": 40, "g": "UHF"}, {"n": "Emisor de Petaca UHF Lectrosonics SMDa (100mW)", "q": 4, "g": "UHF"}, {"n": "Emisor de Petaca UHF Shure UR1 J5E", "q": 21, "g": "UHF"}, {"n": "Híbrido Analógico Dual AEQ TH-03.2 EX", "q": 2, "g": "COMMS"}, {"n": "In-Ear Shure SE-215 CL", "q": 15, "g": "UHF"}, {"n": "Interface USB Digico UBMadi", "q": 2, "g": "SIGNAL PROCESSING"}, {"n": "LD Systems MAUI 5 Go White LC", "q": 20, "g": "SPEAKERS"}, {"n": "Luz Semáforo XLR", "q": 11, "g": "WIRED"}, {"n": "Mesa Analógica Yamaha MG12XU: 12 In / 04 Out", "q": 2, "g": "MIXERS"}, {"n": "Meyer Sound UPA Adapter Sleeve", "q": 18, "g": "STANDS"}, {"n": "Microauricular con PTT solapa de Vacio (Seguridad)", "q": 20, "g": "COMMS"}, {"n": "Micrófono Shure Beta57A", "q": 8, "g": "WIRED"}, {"n": "Módulo Digico Q225 Optical HMA", "q": 2, "g": "MIXERS"}, {"n": "PeliCase Semáforo XLR", "q": 7, "g": "WIRED"}, {"n": "PeliCase Tascam UH-7000", "q": 2, "g": "SIGNAL PROCESSING"}, {"n": "Pie Sobremesa K&M 17cm", "q": 4, "g": "STANDS"}, {"n": "Pinza DPA UC4099 (Flauta / Oboe / Clarinete / Fagot / Universal)", "q": 2, "g": "WIRED"}, {"n": "Receptor Shure AD4DE 02ch (G56 470-636 MHz)", "q": 6, "g": "UHF"}, {"n": "RoadCase L Infra Audio (Scpx + 63A Trif)", "q": 3, "g": "INFRA"}, {"n": "Sennheiser Antenna Booster AB3-A", "q": 2, "g": "UHF"}, {"n": "Sennheiser Stereo Transmitter eW 300 IEM", "q": 2, "g": "UHF"}, {"n": "Snake Digital MADI-Cat6 70mts", "q": 7, "g": "SNAKES"}, {"n": "Spigot Mounting Yoke", "q": 10, "g": "RIGGING"}, {"n": "StageBox Digico SD-MiniRack: 16 In / 16 Out", "q": 2, "g": "I/O RACKS"}, {"n": "Tarjeta Digico D-Rack 8 OUT Analog XLR", "q": 6, "g": "I/O RACKS"}, {"n": "Teclado + Ratón Digico PS2", "q": 2, "g": "MIXERS"}, {"n": "TourCase D2-Rack", "q": 1, "g": "I/O RACKS"}, {"n": "TourCase Digico S21", "q": 2, "g": "MIXERS"}, {"n": "TourCase Híbrido AEQ TH-03.2 EX", "q": 2, "g": "COMMS"}, {"n": "TourCase Meyer Sound ULTRA-X20 (02 uds)", "q": 18, "g": "SPEAKERS"}, {"n": "TourCase Radiador Bosch 12 W", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Transmisor UHF XVive U4", "q": 4, "g": "UHF"}, {"n": "U-Bracket Meyer Sound MUB-MM4XP", "q": 24, "g": "RIGGING"}, {"n": "Unidad de Alimentación Work D9", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Altavoz Autoamplificado Meyer Sound MM-4XP", "q": 24, "g": "SPEAKERS"}, {"n": "Altavoz Pasivo Dome FP6020", "q": 1, "g": "SPEAKERS"}, {"n": "Antena Omnidireccional 1/2 Wave VHF Wavenet", "q": 5, "g": "UHF"}, {"n": "Bateria  Shure SB910M  para ADX1M", "q": 64, "g": "UHF"}, {"n": "Cable Altavoz Blanco 15mts (2x1.5mm)", "q": 0, "g": "INFRA"}, {"n": "Cable BNC UHF 50ohm RG58 05mts", "q": 42, "g": "UHF"}, {"n": "Cable Cetac 63A Trifásico Alextek 20mts", "q": 6, "g": "INFRA"}, {"n": "Cable Jack 1/4\" TS MM 05mts", "q": 10, "g": "INFRA"}, {"n": "Cable Link Powercon 0.5mts LINA", "q": 56, "g": "INFRA"}, {"n": "Cajetín Escenario 12ch XLR Klotz", "q": 8, "g": "SNAKES"}, {"n": "Cargador Kenwood Protalk KSC-35S", "q": 18, "g": "COMMS"}, {"n": "Cinta Métrica 15mts", "q": 4, "g": "RIGGING"}, {"n": "Cuello Micrófono con Led Mute AKG GN30E (30cm - 5 pines)", "q": 18, "g": "WIRED"}, {"n": "Emisor de Mano UHF Lectrosonics HHAE01 SM58", "q": 2, "g": "UHF"}, {"n": "Emisor de Mano UHF Shure UR2 J5E Beta58A", "q": 5, "g": "UHF"}, {"n": "Interface USB Digico Little Blue Box", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "Lampara Led 3 pin 45cm 12v Adam Hall", "q": 10, "g": "MIXERS"}, {"n": "LD Systems MAUI 5 Go White SUB", "q": 21, "g": "SPEAKERS"}, {"n": "Llave Allen MM-4XP", "q": 16, "g": "SPEAKERS"}, {"n": "Mango de Ajuste Meyer Sound Barra Distanciadora M20", "q": 10, "g": "STANDS"}, {"n": "Manguera RGBHV BNC VK5 Madi 03mts", "q": 7, "g": "INFRA"}, {"n": "Mesa Digital Yamaha 01V96: 16 In / 08 Out", "q": 2, "g": "MIXERS"}, {"n": "Micrófono de Corbata Cardioide DPA 4080BM Negro", "q": 44, "g": "UHF"}, {"n": "Micrófono de Corbata Omni Sennheiser para ENG", "q": 2, "g": "UHF"}, {"n": "Microfono Shure SM58", "q": 17, "g": "WIRED"}, {"n": "PeliCase Behringer FBQ100", "q": 3, "g": "SIGNAL PROCESSING"}, {"n": "PeliCase DI Pasiva Palmer PLI 04USB", "q": 12, "g": "WIRED"}, {"n": "Petaca de Intercom Alámbrica Altair EM-201", "q": 9, "g": "COMMS"}, {"n": "Pinza DPA GC4099 (Guitarra / Ukelele / Dobro)", "q": 4, "g": "WIRED"}, {"n": "Receptor de Petaca Sennheiser eW 500 IEM", "q": 4, "g": "UHF"}, {"n": "Shure SBRC-E Cargador Rack 4 Bahias", "q": 14, "g": "UHF"}, {"n": "Snake Digital MADI-Fiber 150mts", "q": 1, "g": "SNAKES"}, {"n": "StageBox Digico SD-Rack: 56 In / 32 Out / 08 AES", "q": 2, "g": "I/O RACKS"}, {"n": "Tarjeta Digico SDRack 32 Bits 8 IN Analog XLR", "q": 18, "g": "I/O RACKS"}, {"n": "TourCase Digico D-Rack", "q": 6, "g": "I/O RACKS"}, {"n": "TourCase Digico S31", "q": 2, "g": "MIXERS"}, {"n": "TourCase Híbrido ClearOne Interact Pro", "q": 1, "g": "COMMS"}, {"n": "TourCase Hospital Sonido M", "q": 3, "g": "INFRA"}, {"n": "TourCase Pupitre Bosch (02 uds)", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "TourCase ULTRA-X40 (02 uds)", "q": 19, "g": "SPEAKERS"}, {"n": "U-Bracket Meyer Sound UPM", "q": 18, "g": "RIGGING"}, {"n": "Adaptador de Vaso para Pole (35-38mm)", "q": 18, "g": "STANDS"}, {"n": "Amplificador Meyer Sound MPS-482HP CE 02ch", "q": 12, "g": "SPEAKERS"}, {"n": "Amplificador The T.Racks DSP 4x4 04ch", "q": 14, "g": "SPEAKERS"}, {"n": "Auricular Intercom Monoaural Altair AM100/2", "q": 18, "g": "COMMS"}, {"n": "Base Madera Meyer Sound UPJunior", "q": 8, "g": "RIGGING"}, {"n": "Bateria  Shure SB920 para ADX2", "q": 32, "g": "UHF"}, {"n": "BNC Amphenol Yagui RG213 20 Metros", "q": 5, "g": "UHF"}, {"n": "Cable Altavoz Blanco 20mts (2x1.5mm)", "q": -4, "g": "INFRA"}, {"n": "Cable BNC UHF 50ohm RF400 20mts", "q": 37, "g": "UHF"}, {"n": "Cable Jack 1/4\" TS M > TS F 05mts", "q": 6, "g": "INFRA"}, {"n": "Cable Link Powercon 0.8mts 750LFC", "q": 20, "g": "INFRA"}, {"n": "Cable Socapex Alextek 10mts", "q": 0, "g": "INFRA"}, {"n": "Cargador Multiple Impres 4197 Motorola", "q": 8, "g": "COMMS"}, {"n": "Emisor de Mano UHF Lectrosonics HHAE01 Beta58A", "q": 2, "g": "UHF"}, {"n": "Emisor de Mano UHF Shure UR2 J5E Beta87A", "q": 6, "g": "UHF"}, {"n": "Emisor de Petaca UHF Shure ADX1M G56 + Baterias", "q": 40, "g": "UHF"}, {"n": "Emisor Plug-ON UHF Sennheiser SKP 100 G4", "q": 2, "g": "UHF"}, {"n": "Fuente Alimentación Behringer FBQ100", "q": 3, "g": "SIGNAL PROCESSING"}, {"n": "Interface USB Digico Little Red Box", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "Lampara Led 4 pin 45cm 12v Adam Hall", "q": 8, "g": "MIXERS"}, {"n": "LD Systems MAUI 5 Go White UC  (Speaker)", "q": 21, "g": "SPEAKERS"}, {"n": "Manguera 02 BNC VK5 Madi 10mts", "q": 1, "g": "INFRA"}, {"n": "Mesa Digital Behringer X32 Compact: 16 In / 08 Out", "q": 4, "g": "MIXERS"}, {"n": "Micrófono de atril DPA SC 4098-BX15 (15cm)", "q": 2, "g": "WIRED"}, {"n": "Micrófono de Corbata Omni DPA 4061BM Beige", "q": 1, "g": "UHF"}, {"n": "Micrófono Shure SM58S (Switch)", "q": 6, "g": "WIRED"}, {"n": "PeliCase Antenas UHF", "q": 16, "g": "UHF"}, {"n": "Pinza DPA PC4099 (Piano)", "q": 2, "g": "WIRED"}, {"n": "Pulpo Pronomic Netcore SP-3F RJ45", "q": 2, "g": "SNAKES"}, {"n": "Receptor de Petaca Sennheiser eW 300 IEM", "q": 2, "g": "UHF"}, {"n": "Snake Digital MADI-Optical HMA 150mts", "q": 5, "g": "SNAKES"}, {"n": "Tarjeta Digico SDRack 32 Bits 8 OUT Analog XLR", "q": 12, "g": "I/O RACKS"}, {"n": "TourCase Bose S1 Pro+ (02 uds)", "q": 8, "g": "SPEAKERS"}, {"n": "TourCase Cabina Doble AudiPack", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "TourCase Digico Purple Box", "q": 2, "g": "I/O RACKS"}, {"n": "TourCase Digico SD11", "q": 2, "g": "MIXERS"}, {"n": "TourCase Híbrido RDSI AEQ Phoenix Stratos", "q": 2, "g": "COMMS"}, {"n": "TourCase Hospital Sonido L", "q": 1, "g": "INFRA"}, {"n": "TourCase Meyer Sound Galaxy 816", "q": 6, "g": "SIGNAL PROCESSING"}, {"n": "U-Bracket Meyer Sound UPJunior", "q": 8, "g": "RIGGING"}, {"n": "Unidad De Control Bosch Integrus DCN-CCU2", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Base Madera Meyer Sound UPM", "q": 20, "g": "RIGGING"}, {"n": "Bolsa EPIS Manu Camargo", "q": 1, "g": "INFRA"}, {"n": "Cable Altavoz Negro 03mts (2X1.5mm)", "q": 5, "g": "INFRA"}, {"n": "Cable de Instrumento Shure WA304 Jack > TA4F Acodado", "q": 1, "g": "UHF"}, {"n": "Cable Ethercom Cat5E Madi 03mts", "q": 37, "g": "INFRA"}, {"n": "Cable Jack 1/4\" TRS > XLR F 03mts (Verde)", "q": 80, "g": "INFRA"}, {"n": "Cable Link Powercon 01mts 900LFC", "q": 6, "g": "INFRA"}, {"n": "Cable Pasivo de Instrumento Lectrosonics M133PRA", "q": 5, "g": "UHF"}, {"n": "Cable Socapex Alextek 20mts", "q": 0, "g": "INFRA"}, {"n": "Central Intercom UHF Hollyland HUB C18S", "q": 12, "g": "COMMS"}, {"n": "Cinturón Velcro Ajustable", "q": 9, "g": "UHF"}, {"n": "Emisor de Mano UHF Shure ADX2/KSM8 G56 + Baterias", "q": 25, "g": "UHF"}, {"n": "Expansor de Audio 4in/4out Bosch PRS-4AEX4", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Fuente Alimentación ShowLink AD610", "q": 1, "g": "UHF"}, {"n": "Fuente Alimentación Tascam 4x4", "q": 12, "g": "SIGNAL PROCESSING"}, {"n": "Loop Digital MADI-Optical HMA 05mts", "q": 4, "g": "SNAKES"}, {"n": "Mesa Digital Behringer X32: 32 In / 16 Out", "q": 2, "g": "MIXERS"}, {"n": "Microfono de Corbata Omni DPA 4071BM", "q": 2, "g": "UHF"}, {"n": "Micrófono Shure PG48S (Switch)", "q": 0, "g": "WIRED"}, {"n": "Monitor Autoamplificado Meyer Sound MJF-208", "q": 8, "g": "SPEAKERS"}, {"n": "Peana Sobremesa K&M (03 pines)", "q": 12, "g": "WIRED"}, {"n": "PeliCase Cinturon UHF", "q": 5, "g": "UHF"}, {"n": "PeliCase Digico Little Red Box", "q": 1, "g": "I/O RACKS"}, {"n": "Pinza DPA MS4099 (Pie de Micro)", "q": 2, "g": "WIRED"}, {"n": "Pulpo Pronomic Netcore SP-3M RJ45", "q": 2, "g": "SNAKES"}, {"n": "Receptor de Petaca Sennheiser eW G3", "q": 2, "g": "UHF"}, {"n": "Tarjeta Digico SDRack 8 OUT AES", "q": 5, "g": "I/O RACKS"}, {"n": "TourCase Altair DA-410", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "TourCase Bosch Integrus", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "TourCase LD System SAT242 G2 White (04 uds)", "q": 5, "g": "SPEAKERS"}, {"n": "TourCase Walkies Motorola (16 uds)", "q": 2, "g": "COMMS"}, {"n": "Adaptador Ethercom Cat6 FF Neutrik", "q": 11, "g": "INFRA"}, {"n": "Adaptador Meyer Sound LINA MPA-3 Bracket", "q": 16, "g": "RIGGING"}, {"n": "Amplificador Audac DPA152 02ch", "q": 1, "g": "SPEAKERS"}, {"n": "Cable Activo de Instrumento Lectrosonics MI39ARA", "q": 5, "g": "UHF"}, {"n": "Cable Altavoz Negro 05 mts (2X1.5mm)", "q": 40, "g": "INFRA"}, {"n": "Cable de Instrumento Shure WA302 Jack > TA4F Recto", "q": 4, "g": "UHF"}, {"n": "Cable Jack 1/4\" TRS > XLR M 03mts (Azul)", "q": 128, "g": "INFRA"}, {"n": "Cable Link Powercon 10mts", "q": 21, "g": "INFRA"}, {"n": "Double Clip DPA 4080", "q": 7, "g": "UHF"}, {"n": "Emisor de Petaca UHF Sennheiser eW G3", "q": 2, "g": "UHF"}, {"n": "Emisor Plug-ON UHF Shure AD3 G56 + Pilas", "q": 6, "g": "UHF"}, {"n": "Latigador Litton 16ch XLR 05mts", "q": 4, "g": "SNAKES"}, {"n": "Maletin Covid", "q": 8, "g": "UHF"}, {"n": "Mesa Digital Digico S21: 48 In / 16 Out", "q": 2, "g": "MIXERS"}, {"n": "Micrófono Shure Beta91A", "q": 3, "g": "WIRED"}, {"n": "Mounting Yoke Meyer Sound MYA-LINA", "q": 8, "g": "RIGGING"}, {"n": "Peana Sobremesa ON/OFF K&M (05 pines)", "q": 18, "g": "WIRED"}, {"n": "Peana UHF Sobremesa Negra AVLR", "q": 11, "g": "UHF"}, {"n": "PeliCase TFT Manu Camargo", "q": 1, "g": "INFRA"}, {"n": "Petaca de Intercom UHF Altair WBP-210 Extreme", "q": 4, "g": "COMMS"}, {"n": "Pinza DPA STC4099 (Saxo / Trompeta / Trombón / Trompa / Tuba)", "q": 5, "g": "WIRED"}, {"n": "Pulpo Alextek Socapex F > 06 Shucko 16A M", "q": 18, "g": "INFRA"}, {"n": "Subgrave Autoamplificado Meyer Sound 750-LFC w/Rigg", "q": 18, "g": "SPEAKERS"}, {"n": "TourCase Digico SD9 Core2", "q": 1, "g": "MIXERS"}, {"n": "TourCase LD Systems MAUI 5 Go White (02 uds)", "q": 10, "g": "SPEAKERS"}, {"n": "TourCase Splitter Prensa 40ch Altair", "q": 8, "g": "SIGNAL PROCESSING"}, {"n": "TourCase UPS 3000 W", "q": 2, "g": "I/O RACKS"}, {"n": "TourCase Walkies Motorola (24 uds)", "q": 2, "g": "COMMS"}, {"n": "Transmisor de Infrarrojos 8ch Bosch INT-TX08", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Adaptador Meyer Sound LINA MPA-2 Bracket", "q": 16, "g": "RIGGING"}, {"n": "Amplificador Soundtube SA202-RDT", "q": 1, "g": "SPEAKERS"}, {"n": "Auricular Intercom Monoaural UHF Hollyland C1", "q": 96, "g": "COMMS"}, {"n": "Cable Altavoz Negro 10mts (2X1.5mm)", "q": 18, "g": "INFRA"}, {"n": "Cable BNC VK5 75 Ohm 10mts / Traducción", "q": 8, "g": "INFRA"}, {"n": "Cable Jack 1/4\" TRS 1.5mts", "q": 60, "g": "INFRA"}, {"n": "Cable Link Powercon 05mts", "q": 22, "g": "INFRA"}, {"n": "Latigador Klotz 12ch XLR 03mts", "q": 8, "g": "SNAKES"}, {"n": "Mesa Digital Digico S31: 48 In / 16 Out", "q": 2, "g": "MIXERS"}, {"n": "Micrófono Shure Beta52A", "q": 1, "g": "WIRED"}, {"n": "Mounting Yoke Meyer Sound  MYA-UPQ", "q": 8, "g": "RIGGING"}, {"n": "Peana UHF Sobremesa Blanca AVLR", "q": 8, "g": "UHF"}, {"n": "Peana XLR Sobremesa Madera AVLR", "q": 5, "g": "WIRED"}, {"n": "PeliCase Herramientas Manu Camargo", "q": 1, "g": "INFRA"}, {"n": "Pinza DPA CM4099 (Pinza Universal)", "q": 6, "g": "WIRED"}, {"n": "Pulpo Alextek Socapex M > 06 Shucko 16A F", "q": 18, "g": "INFRA"}, {"n": "Pupitre de Interprete Bosch Integrus DCN-IDESK-D", "q": 4, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Shure AXT600 Administrador Espectro", "q": 1, "g": "UHF"}, {"n": "Subgrave Autoamplificado Meyer Sound 900-LFC w/Rigg", "q": 6, "g": "SPEAKERS"}, {"n": "TourCase Digico Quantum 225", "q": 2, "g": "MIXERS"}, {"n": "TourCase Meyer Sound LINA (04 uds)", "q": 9, "g": "SPEAKERS"}, {"n": "TourCase Pinanson AudioLink 4x4", "q": 4, "g": "SIGNAL PROCESSING"}, {"n": "Adaptador XLR F > 02 XLR M 03mts", "q": 53, "g": "INFRA"}, {"n": "Auricular Master USB Hollyland C1", "q": 13, "g": "COMMS"}, {"n": "Cable Altavoz Negro 15mts (2X1.5mm)", "q": 7, "g": "INFRA"}, {"n": "Cable BNC VK5 75 Ohm 20mts / Traducción", "q": 12, "g": "INFRA"}, {"n": "Cable Powercon > Shucko M 16A 03mts", "q": 145, "g": "INFRA"}, {"n": "Cajetín Alextek Socapex M > 06 Shuckos F", "q": 36, "g": "INFRA"}, {"n": "Cuerda Seguridad  Negra 10mm 30mts", "q": 4, "g": "RIGGING"}, {"n": "Extensor Manguera Litton 15mts", "q": 1, "g": "SNAKES"}, {"n": "Mesa Digital Digico SD11 Core 2: 48 In / 24 Out", "q": 2, "g": "MIXERS"}, {"n": "MicroCascos Shure BRH 440M", "q": 2, "g": "WIRED"}, {"n": "Peana Sobremesa ON/OFF K&M (03 pines)", "q": 34, "g": "WIRED"}, {"n": "PeliCase Waves Manu Camargo", "q": 1, "g": "INFRA"}, {"n": "Pinza DPA VC4099 (Violin / Viola / Banjo / Mandolina)", "q": 8, "g": "WIRED"}, {"n": "Procesador Meyer Sound Galaxy 816: 8 In / 16 Out", "q": 6, "g": "SIGNAL PROCESSING"}, {"n": "Radiador de Infrarrojos 12w Bosch Integrus LBB4511/00", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Shure Diversity ShowLink Access Point AD610", "q": 1, "g": "UHF"}, {"n": "Soporte de Pared Articulado Genelec", "q": 4, "g": "RIGGING"}, {"n": "TourCase Klark Teknik DN-370", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "TourCase Meyer Sound 750-LFC (02 uds)", "q": 9, "g": "SPEAKERS"}, {"n": "Amplificador de Cascos Behringer Powerplay HA 4700", "q": 0, "g": "HEADPHONES"}, {"n": "Antipop AKG414", "q": -2, "g": "WIRED"}, {"n": "Cable Altavoz Negro 20mts (2X1.5mm)", "q": 12, "g": "INFRA"}, {"n": "Cable RCA > XLR F 03mts (Rojo)", "q": 42, "g": "INFRA"}, {"n": "Cable Shucko 16A 05mts", "q": 170, "g": "INFRA"}, {"n": "Cargador de baterias Hollyland C1", "q": 12, "g": "COMMS"}, {"n": "Conversor MADI/Fiber Digico Purple Box", "q": 2, "g": "SIGNAL PROCESSING"}, {"n": "Cuadro Directos 32A Trifásico (06 shuckos) Ratón", "q": 1, "g": "INFRA"}, {"n": "Daisy Chain 23KN", "q": 8, "g": "RIGGING"}, {"n": "Extensor Manguera Litton 20mts", "q": 4, "g": "SNAKES"}, {"n": "Mesa Digital Digico SD9 Core 2: 96 In / 48 Out", "q": 1, "g": "MIXERS"}, {"n": "Micrófono Conectable Flexible 31cm Bosch DCN-MICS", "q": 31, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Micrófono Neumann KM184", "q": 6, "g": "WIRED"}, {"n": "Peana Sobremesa K&M Presidente (05 pines)", "q": 1, "g": "WIRED"}, {"n": "PeliCase Marcos Revuelta", "q": 1, "g": "INFRA"}, {"n": "Radiador de Infrarrojos 24w Bosch Integrus LBB4512/00", "q": 2, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Soporte de Pared Fijo Genelec", "q": 37, "g": "RIGGING"}, {"n": "TourCase Klark Teknik DN-360", "q": 1, "g": "SIGNAL PROCESSING"}, {"n": "TourCase Meyer Sound MM-4XP (02 uds)", "q": 12, "g": "SPEAKERS"}, {"n": "Araña AKG414", "q": -2, "g": "WIRED"}, {"n": "Cable RCA > XLR M 03mts (Rojo)", "q": 66, "g": "INFRA"}, {"n": "Cable Shucko 16A 10mts", "q": 91, "g": "INFRA"}, {"n": "Carro BNC VK5 75 Ohm 100mts / Traducción", "q": 4, "g": "INFRA"}, {"n": "Cuadro Directos ViGi 32A Trifásico (06 shuckos - 01 scpx)", "q": 6, "g": "INFRA"}, {"n": "Extensor Manguera Klotz 10mts", "q": 8, "g": "SNAKES"}, {"n": "Fuente Alimentación Micrófono AKG GN30E 06ch", "q": 2, "g": "WIRED"}, {"n": "Mesa Digital Digico Q225 Pulse: 96 In / 48 Out", "q": 2, "g": "MIXERS"}, {"n": "Micrófono Beyerdynamic M101N", "q": 1, "g": "WIRED"}, {"n": "Mosquetón con Seguro 25KN", "q": 12, "g": "RIGGING"}, {"n": "Ordenador Portátil Software ClearOne Interact", "q": 1, "g": "COMMS"}, {"n": "Receptor de Bolsillo 8ch Bosch LBB 4540/08", "q": 200, "g": "TRADUCCION / MULTICONFERENCIA"}, {"n": "Soporte Fijo Pared LD Systems SAT242 G2 White", "q": 20, "g": "RIGGING"}, {"n": "TourCase Meyer Sound UPM-1P (04 uds)", "q": 0, "g": "SPEAKERS"}, {"n": "Altavoz Autoamplificado Bose S1 Pro+", "q": 16, "g": "SPEAKERS"}, {"n": "Barra Extension Dual K&M", "q": 4, "g": "WIRED"}, {"n": "Cable Bosch DIN5 10mts", "q": 9, "g": "INFRA"}, {"n": "Cable Shucko 16A 15mts", "q": 71, "g": "INFRA"}, {"n": "ClearOne Interact Mic Extender", "q": 1, "g": "COMMS"}, {"n": "Conversor XLR3M > XLR5F", "q": 0, "g": "INFRA"}, {"n": "Cuadro Directos ViGi 63A Trifásico (02 Cetac 32A - 02 scpx)", "q": 3, "g": "INFRA"}, {"n": "Extensor Manguera Klotz 20mts", "q": 8, "g": "SNAKES"}, {"n": "Fuente Alimentación Micrófono AKG GN30E 10ch", "q": 1, "g": "WIRED"}, {"n": "Micrófono Sennheiser E604", "q": 10, "g": "WIRED"}, {"n": "Polea Elevación con Freno", "q": 4, "g": "RIGGING"}, {"n": "TourCase Meyer Sound UPM-1P (02 uds)", "q": 0, "g": "SPEAKERS"}, {"n": "U-Bracket LD Systems SAT242 G2 White", "q": 16, "g": "RIGGING"}, {"n": "Adaptador DPA 6001-BC (Microdot - XLR)", "q": 22, "g": "WIRED"}, {"n": "Cable Bosch DIN5 05mts", "q": 9, "g": "INFRA"}, {"n": "Cable Shucko 16A 20mts", "q": 71, "g": "INFRA"}, {"n": "Conversor XLR5M > XLR3F", "q": 0, "g": "INFRA"}, {"n": "Micrófono Sennheiser E906", "q": 2, "g": "WIRED"}, {"n": "Monitor Autoamplificado Genelec 8030A", "q": 9, "g": "SPEAKERS"}, {"n": "Polea Giratoria", "q": 0, "g": "RIGGING"}, {"n": "Polycom VoiceStation 300 Power/Wall Module", "q": 1, "g": "COMMS"}, {"n": "Soporte en L Meyer Sound UPM", "q": 11, "g": "RIGGING"}, {"n": "TourCase Meyer Sound UPQ-D1", "q": 8, "g": "SPEAKERS"}, {"n": "Transformador 220V > 110V  1500w", "q": 16, "g": "INFRA"}, {"n": "Adaptador XLR MM 0.3mts (Azul)", "q": 77, "g": "INFRA"}, {"n": "Cable EN5 Mixto (XLR 5 M - Phoenix) 02mts", "q": 16, "g": "INFRA"}, {"n": "Micrófono Sennheiser MKH416", "q": 2, "g": "WIRED"}, {"n": "Monitor Autoamplificado Genelec 8020A", "q": 37, "g": "SPEAKERS"}, {"n": "Paquete U-Bracket Lina (04 Tornillos + Arandelas + Allen)", "q": 12, "g": "RIGGING"}, {"n": "Regleta 16A 06 Sockets Negra", "q": 68, "g": "INFRA"}, {"n": "Silent Block Shure A400SM", "q": 102, "g": "WIRED"}, {"n": "Soporte en L Meyer Sound UPA", "q": 11, "g": "RIGGING"}, {"n": "Teléfono Analógico Sobremesa", "q": 5, "g": "COMMS"}, {"n": "TourCase Bose L1 TOP", "q": 8, "g": "SPEAKERS"}, {"n": "Transformador 220V > 110V  2000w", "q": 5, "g": "INFRA"}, {"n": "Adaptador  XLR FF 0.3mts (verde)", "q": 75, "g": "INFRA"}, {"n": "Cable EN5 Mixto (XLR 5 F - EN5) 0.3mts", "q": 30, "g": "INFRA"}, {"n": "Control de Volumen Pasivo Palmer Monicon", "q": 13, "g": "SIGNAL PROCESSING"}, {"n": "Micrófono AKG C414 XLII", "q": 2, "g": "WIRED"}, {"n": "Paquete MPA Lina (06 Tornillos + Arandelas + Allen)", "q": 8, "g": "RIGGING"}, {"n": "Regleta 16A 03 Sockets Negra", "q": 180, "g": "INFRA"}, {"n": "Silent Block AKG h500", "q": 6, "g": "WIRED"}, {"n": "Soporte en L Meyer Sound UPJ // UpJunior", "q": 11, "g": "RIGGING"}, {"n": "Subgrave Autoamplificado Genelec 7050 BPM", "q": 2, "g": "SPEAKERS"}, {"n": "TourCase Bose L1 SUB", "q": 8, "g": "SPEAKERS"}, {"n": "Transformador Ustronic 220V > 110V 1500w", "q": 1, "g": "INFRA"}, {"n": "Antipop Microflex Shure Original", "q": 66, "g": "WIRED"}, {"n": "Cable EN5 Mixto (XLR 5 MF) 05mts", "q": 16, "g": "INFRA"}, {"n": "Cable XLR MF 0.5mts (Link LINA)", "q": 59, "g": "INFRA"}, {"n": "Carro Shucko 16A 50mts", "q": 3, "g": "INFRA"}, {"n": "Microfono Crown PCC160", "q": 2, "g": "WIRED"}, {"n": "Monitor Autoamplificado Yamaha MSP3", "q": 2, "g": "SPEAKERS"}, {"n": "PeliCase Vietta DO-2W (02 uds)", "q": 1, "g": "SPEAKERS"}, {"n": "Soporte Altavoz Sobremesa Kanto S2 White", "q": 8, "g": "RIGGING"}, {"n": "Antipop Microflex Shure Chino", "q": 48, "g": "WIRED"}, {"n": "Cable EN5 Mixto (XLR 5 MF) 15mts", "q": 16, "g": "INFRA"}, {"n": "Cable XLR MF (Link 750LFC)", "q": 20, "g": "INFRA"}, {"n": "Micrófono Behringer B5", "q": 8, "g": "WIRED"}, {"n": "Monitor Autoamplificado Fostex PM0.4n", "q": 4, "g": "SPEAKERS"}, {"n": "PeliCase Genelec 8030A (02 uds)", "q": 4, "g": "SPEAKERS"}, {"n": "Antipop AKG GN30E", "q": 16, "g": "WIRED"}, {"n": "Cable Mixto Paralelo (XLR MF 3Pin + XLR MF 5Pin) 03mts", "q": 26, "g": "INFRA"}, {"n": "Cable XLR MF (Link 900LFC)", "q": 0, "g": "INFRA"}, {"n": "Micrófono Behringer ECM8000", "q": 14, "g": "WIRED"}, {"n": "PeliCase Genelec 8020A (02 uds)", "q": 16, "g": "SPEAKERS"}, {"n": "Adaptador Veam a Shucko M 16A 03mts", "q": 3, "g": "INFRA"}, {"n": "Antipop Micro Sennheiser MKH416", "q": 2, "g": "WIRED"}, {"n": "Cable XLR MF 03mts", "q": 328, "g": "INFRA"}, {"n": "Micrófono PronoMic DM66S", "q": 1, "g": "WIRED"}, {"n": "Adaptador Bose L1 (NTL4 0.3mts) LINK", "q": 10, "g": "INFRA"}, {"n": "Cable XLR MF 05mts", "q": 184, "g": "INFRA"}, {"n": "Adaptador IEC F > Schuko M + IEC F (Bose L1)", "q": 3, "g": "INFRA"}, {"n": "Cable XLR MF 10mts", "q": 90, "g": "INFRA"}, {"n": "Adaptador XLR F >Jack 1/4\" + XLR M (Bose L1)", "q": 8, "g": "INFRA"}, {"n": "Cable XLR MF 15mts", "q": 90, "g": "INFRA"}, {"n": "Adaptador Cetac F 16A Monofásico > Shucko 16A M 03mts", "q": 10, "g": "INFRA"}, {"n": "Cable XLR MF 20mts", "q": 67, "g": "INFRA"}, {"n": "Cable Audio RCA Óptico Digital 01mts", "q": 4, "g": "INFRA"}, {"n": "Manguera XLR MF (04 ch) 03mts", "q": 82, "g": "INFRA"}, {"n": "Cable USB 2.0 Type A/B 0.2mts", "q": 2, "g": "INFRA"}, {"n": "Manguera XLR MF (04 ch) 20mts", "q": 62, "g": "INFRA"}, {"n": "Adaptador Minijack 1/8\" / Polycom", "q": 2, "g": "INFRA"}, {"n": "Manguera XLR MF (08 ch) 03mts", "q": 2, "g": "INFRA"}, {"n": "Cable RJ11 01mts", "q": 9, "g": "INFRA"}, {"n": "Manguera XLR MF (16 ch) 03mts", "q": 1, "g": "INFRA"}];
+</script>
+<!-- /*SS*/null/*SE*/ -->
+<div class="placing-hint" id="placingHint"></div>
+</body>
+</html>

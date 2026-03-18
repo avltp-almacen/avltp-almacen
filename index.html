@@ -111,7 +111,7 @@ header{height:54px;background:#fff;border-bottom:1px solid #e5e0d8;display:flex;
 .catItem.selected{background:#fff3ee;border-left:3px solid #e8622a}
 .catItem.placed{opacity:.4}
 .catItem-name{font-size:11px;color:#2c2925;flex:1;line-height:1.3}
-.catItem-qty{font-size:10px;color:#9c9490;font-weight:700;flex-shrink:0}
+.catItem-qty{font-size:10px;font-weight:700;flex-shrink:0;text-align:right}
 .catToggle{position:absolute;left:280px;top:50%;transform:translateY(-50%);z-index:10;background:#e8622a;color:#fff;border:none;border-radius:0 6px 6px 0;width:18px;height:40px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;transition:left .2s}
 #catPanel.hidden~.catToggle,#vI .catToggle{left:0}
 .placing-hint{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2c2925;color:#fff;padding:10px 20px;border-radius:20px;font-size:12px;z-index:9999;pointer-events:none;display:none}
@@ -387,7 +387,7 @@ window.addEventListener('DOMContentLoaded',function(){
   buildColors();
   // Pointer events — unified mouse+touch, captures even outside window
   // Block ALL HTML5 drag in builder; inventory view re-enables via initDragDrop
-  document.addEventListener('dragstart',function(e){if(mode!=='I'||!e.target.closest('.icard[draggable]')){e.preventDefault();return false;}});
+  document.addEventListener('dragstart',function(e){if(!e.target.closest('.icard[draggable]')){e.preventDefault();return false;}});
   G('PAL').setAttribute('draggable','false');
   G('PAL').addEventListener('pointerdown',function(e){
     if(e.button!==0&&e.pointerType==='mouse')return;
@@ -1209,7 +1209,7 @@ function getPlacedNames(){
   if(!wh) return names;
   wh.pasillos.forEach(function(p){p.lados.forEach(function(l){l.estanterias.forEach(function(e){
     e.huecos.forEach(function(h){h.alturas.forEach(function(a){
-      (a.items||[]).forEach(function(it){ names[it.nombre]=true; });
+      (a.items||[]).forEach(function(it){ names[it.nombre]=(names[it.nombre]||0)+(it.cantidad||1); });
     });});
   });});});
   return names;
@@ -1228,10 +1228,12 @@ function renderCatList(){
   var html='';
   items.forEach(function(it, idx){
     var isSel = catItemSel && catItemSel.n===it.n;
-    var isPlaced = !!placed[it.n];
+    var usedQty=placed[it.n]||0,availQty=it.q-usedQty;
+    var isPlaced = availQty<=0;
+    var qtyColor=availQty<=0?'#c0392b':usedQty>0?'#e67e22':'#9c9490';
     html+='<div class="catItem'+(isSel?' selected':'')+(isPlaced?' placed':'')+'" onclick="selectCatIdx('+idx+')">'
       +'<div class="catItem-name">'+it.n+'</div>'
-      +'<div class="catItem-qty">×'+it.q+'</div>'
+      +'<div class="catItem-qty" style="color:'+qtyColor+'">'+(availQty<=0?'Agotado':availQty+(usedQty>0?' <small style="opacity:.5">/'+it.q+'</small>':''))+'</div>'
       +'</div>';
   });
   if(!items.length) html='<div style="padding:20px;text-align:center;color:#9c9490;font-size:11px">Sin resultados</div>';

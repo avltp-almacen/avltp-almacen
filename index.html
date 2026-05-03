@@ -221,6 +221,7 @@ body.placing .ccard{cursor:crosshair!important;box-shadow:0 0 0 2px #e8622a;}
   <div class="sp"></div>
   <div id="hdrB" style="display:flex;gap:8px"><button class="btn" onclick="doUndo()" title="Deshacer (Ctrl+Z)">↩ Deshacer</button>
     <button class="btn" onclick="doClear()">Limpiar</button>
+    <button class="btn" onclick="doExportLed()">LED Map</button>
     <button class="btn" onclick="doSave()">Guardar</button>
     <button class="btn btnp" onclick="goInv()">Ir al inventario</button>
   </div>
@@ -454,6 +455,67 @@ function chg(k,d){
   if(k==='H'){nH=Math.max(1,Math.min(10,nH+d));G('VH').textContent=nH;}
   else{nA=Math.max(1,Math.min(10,nA+d));G('VA').textContent=nA;}
 }
+// Huecos por balda
+function getHuecosForBalda(s,a){return(s.baldaHuecos&&s.baldaHuecos[a]!=null)?s.baldaHuecos[a]:s.huecos;}
+function setBaldaH(id,a,delta){
+  var s=shelves.find(function(x){return x.id===id;});if(!s)return;
+  if(!s.baldaHuecos)s.baldaHuecos={};
+  s.baldaHuecos[a]=Math.max(1,Math.min(12,getHuecosForBalda(s,a)+delta));
+  renderProps();pushHistory();
+}
+function resetBaldaH(id,a){
+  var s=shelves.find(function(x){return x.id===id;});if(!s)return;
+  if(s.baldaHuecos)delete s.baldaHuecos[a];
+  renderProps();pushHistory();
+}
+function setBaldaGpio(id,a,val){
+  var s=shelves.find(function(x){return x.id===id;});if(!s)return;
+  if(!s.baldaGpio)s.baldaGpio={};
+  var n=parseInt(val);
+  s.baldaGpio[a]=(isNaN(n)||val==='')?null:Math.max(0,Math.min(39,n));
+  renderProps();
+}
+function setBaldaOffset(id,a,val){
+  var s=shelves.find(function(x){return x.id===id;});if(!s)return;
+  if(!s.baldaLedOffset)s.baldaLedOffset={};
+  var n=parseInt(val);
+  s.baldaLedOffset[a]=isNaN(n)?0:Math.max(0,n);
+  renderProps();
+}
+function getLedMap(){
+  return shelves.map(function(s){
+    var alturas=[];
+    for(var ai=s.alturas;ai>=1;ai--){
+      var nH=getHuecosForBalda(s,ai);
+      var gpio=(s.baldaGpio&&s.baldaGpio[ai]!=null)?s.baldaGpio[ai]:null;
+      var offset=(s.baldaLedOffset&&s.baldaLedOffset[ai]!=null)?s.baldaLedOffset[ai]:0;
+      var huecos=[];
+      for(var h=1;h<=nH;h++){
+        huecos.push({hueco:h,led_start:offset+(h-1)*5,led_end:offset+(h-1)*5+4});
+      }
+      alturas.push({altura:ai,gpio:gpio,led_offset:offset,total_leds:offset+nH*5,huecos:huecos});
+    }
+    return{estanteria:s.num,nombre:s.nombre||('Est.'+s.num),alturas:alturas};
+  });
+}
+function doExportLed(){
+  var map=getLedMap();
+  var txt=JSON.stringify(map,null,2);
+  window._ledTxt=txt;
+  var old=document.getElementById('LEDMOD');if(old)old.remove();
+  var ov=document.createElement('div');ov.className='eov';ov.id='LEDMOD';
+  ov.onclick=function(e){if(e.target===ov)ov.remove();};
+  ov.innerHTML='<div class="emod">'
+    +'<h2>LED Map — WS2812B</h2>'
+    +'<p>JSON listo para el firmware ESP32. Cada hueco = 5 LEDs (<b>led_start</b> a <b>led_end</b>). GPIO por balda.</p>'
+    +'<textarea readonly id="LEDTXT" style="height:220px;font-size:9px">'+txt+'</textarea>'
+    +'<div class="ebtns">'
+    +'<button class="btn" onclick="document.getElementById(\'LEDMOD\').remove()">Cerrar</button>'
+    +'<button class="btn btnp" onclick="navigator.clipboard.writeText(window._ledTxt).then(function(){toast(\'Copiado\')})">Copiar</button>'
+    +'<button class="btn btnp" onclick="var a=document.createElement(\'a\');a.href=URL.createObjectURL(new Blob([window._ledTxt],{type:\'application/json\'}));a.download=\'led_map.json\';a.click()">Descargar</button>'
+    +'</div></div>';
+  document.body.appendChild(ov);
+}
 
 /* ---- DRAG ---- */
 function killGhost(){var g=G('_G');if(g)g.remove();}
@@ -609,10 +671,44 @@ function renderProps(){
   var s=shelves.find(function(x){return x.id===selId;});
   if(!s){G('PROPS').innerHTML='<div style="padding:28px 16px;text-align:center;color:#4e4a45;font-size:11px;line-height:1.8"><b style="color:#8c8680;font-size:12px">Sin seleccion</b><br><br>Toca una estanteria<br>para editarla</div>';return;}
   if(!s.cells)s.cells={};
-  var cg='';
+  // Per-balda huecos counters + LED config
+  var baldaSec='<div style="display:flex;flex-direction:column;gap:6px;margin-top:2px">';
+  for(var ai=s.alturas;ai>=1;ai--){
+    var nHB=getHuecosForBalda(s,ai);
+    var isOverride=s.baldaHuecos&&s.baldaHuecos[ai]!=null;
+    var gpio=(s.baldaGpio&&s.baldaGpio[ai]!=null)?s.baldaGpio[ai]:'';
+    var offset=(s.baldaLedOffset&&s.baldaLedOffset[ai]!=null)?s.baldaLedOffset[ai]:0;
+    var ledEnd=offset+nHB*5-1;
+    var ledRange=gpio!==''?'<span style="font-size:9px;color:#4e4a45;font-family:monospace">LEDs '+offset+'–'+ledEnd+'</span>':'';
+    baldaSec+='<div style="background:#252220;border:1px solid #2e2b27;border-radius:7px;padding:7px 8px">'
+      // Row 1: label + huecos counter + override reset
+      +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'
+      +'<div style="font-size:10px;color:'+(isOverride?'#e8622a':'#8c8680')+';font-weight:700;width:20px">A'+ai+'</div>'
+      +'<div class="cr" style="gap:4px"><div class="cb" onclick="setBaldaH('+s.id+','+ai+',-1)">-</div>'
+      +'<div class="cv" style="font-size:14px;min-width:20px">'+nHB+'</div>'
+      +'<div class="cu">H</div>'
+      +'<div class="cb" onclick="setBaldaH('+s.id+','+ai+',1)">+</div></div>'
+      +(isOverride?'<div style="font-size:9px;color:#4e4a45;cursor:pointer;padding:2px 5px;border-radius:4px;border:1px solid #3a3632" onclick="resetBaldaH('+s.id+','+ai+')" title="Restablecer huecos">↺</div>':'')
+      +'</div>'
+      // Row 2: GPIO + offset + LED range
+      +'<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">'
+      +'<div style="font-size:9px;color:#4e4a45;font-weight:600;letter-spacing:.08em">GPIO</div>'
+      +'<input class="pi" type="number" min="0" max="39" style="width:44px;font-size:11px;padding:3px 5px" value="'+gpio+'" placeholder="–" oninput="setBaldaGpio('+s.id+','+ai+',this.value)">'
+      +'<div style="font-size:9px;color:#4e4a45;font-weight:600;letter-spacing:.08em;margin-left:4px">Offset</div>'
+      +'<input class="pi" type="number" min="0" style="width:44px;font-size:11px;padding:3px 5px" value="'+offset+'" oninput="setBaldaOffset('+s.id+','+ai+',this.value)">'
+      +ledRange
+      +'</div>'
+      +'</div>';
+  }
+  baldaSec+='</div>';
+  // Cell grid - per-balda rows (flex column, each row is its own grid)
+  var cg='<div style="display:flex;flex-direction:column;gap:4px">';
   for(var a=s.alturas;a>=1;a--){
-    cg+='<div style="font-size:9px;color:#4e4a45;font-family:monospace;display:flex;align-items:center;justify-content:flex-end;padding-right:4px;font-weight:600">A'+a+'</div>';
-    for(var h=1;h<=s.huecos;h++){
+    var nH2=getHuecosForBalda(s,a);
+    cg+='<div style="display:flex;gap:3px;align-items:flex-start">';
+    cg+='<div style="width:22px;font-size:9px;color:#4e4a45;font-family:monospace;font-weight:600;text-align:right;padding-right:4px;padding-top:8px">A'+a+'</div>';
+    cg+='<div style="flex:1;display:grid;grid-template-columns:repeat('+nH2+',1fr);gap:3px">';
+    for(var h=1;h<=nH2;h++){
       var key=h+'-'+a,items=s.cells[key]||[];
       var bg=items.length?s.color+'22':'#252220',bdr=items.length?s.color+'66':'#2e2b27';
       cg+='<div onclick="openCell('+s.id+','+h+','+a+')" style="background:'+bg+';border:1px solid '+bdr+';border-radius:5px;padding:3px 4px;cursor:pointer;min-height:30px;display:flex;flex-direction:column;gap:2px">'
@@ -620,23 +716,34 @@ function renderProps(){
         +(items.length?items.map(function(i){return '<div style="background:'+s.color+';color:#fff;border-radius:3px;padding:1px 4px;font-size:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+i.n+'</div>';}).join(''):'<div style="color:#4e4a45;font-size:10px;text-align:center">+</div>')
         +'</div>';
     }
+    cg+='</div></div>';
   }
+  cg+='</div>';
   G('PROPS').innerHTML='<div class="pbd">'
     +'<div class="pg"><div class="pl">Numero</div><input class="pi" type="number" value="'+s.num+'" min="1" oninput="sp('+s.id+',\'num\',parseInt(this.value)||1)"></div>'
     +'<div class="pg"><div class="pl">Etiqueta</div><input class="pi" type="text" value="'+s.nombre+'" placeholder="Ej: Cableado..." oninput="sp('+s.id+',\'nombre\',this.value)"></div>'
-    +'<div class="pg"><div class="pl">Huecos</div><div class="cr"><div class="cb" onclick="spn('+s.id+',\'huecos\',-1)">-</div><div class="cv" id="PH">'+s.huecos+'</div><div class="cu">H</div><div class="cb" onclick="spn('+s.id+',\'huecos\',1)">+</div></div></div>'
+    +'<div class="pg"><div class="pl">Huecos (defecto)</div><div class="cr"><div class="cb" onclick="spn('+s.id+',\'huecos\',-1)">-</div><div class="cv" id="PH">'+s.huecos+'</div><div class="cu">H</div><div class="cb" onclick="spn('+s.id+',\'huecos\',1)">+</div></div>'
+    +'<div style="font-size:9px;color:#4e4a45;margin-top:3px">Cambiarlo resetea las baldas</div></div>'
     +'<div class="pg"><div class="pl">Alturas</div><div class="cr"><div class="cb" onclick="spn('+s.id+',\'alturas\',-1)">-</div><div class="cv" id="PA">'+s.alturas+'</div><div class="cu">A</div><div class="cb" onclick="spn('+s.id+',\'alturas\',1)">+</div></div></div>'
+    +'<div class="pg"><div class="pl">Huecos por balda</div>'+baldaSec+'</div>'
     +'<div class="pg"><div class="pl">Orientacion</div><div class="orow"><div class="ob '+(s.orient==='V'?'on':'')+'" onclick="sp('+s.id+',\'orient\',\'V\');renderProps()">Vertical</div><div class="ob '+(s.orient==='H'?'on':'')+'" onclick="sp('+s.id+',\'orient\',\'H\');renderProps()">Horiz.</div></div></div>'
     +'<div class="pg"><div class="pl">Color</div><div class="crow">'
     +COLORS.map(function(c){return '<div class="sw'+(c===s.color?' on':'')+'" style="background:'+c+'" onclick="sp('+s.id+',\'color\',\''+c+'\');renderProps()"></div>';}).join('')
     +'</div></div>'
-    +'<div class="pg"><div class="pl">Contenido</div><div style="display:grid;grid-template-columns:22px '+Array.from({length:s.huecos}).fill('1fr').join(' ')+';gap:3px;margin-top:2px">'+cg+'</div></div>'
+    +'<div class="pg"><div class="pl">Contenido</div>'+cg+'</div>'
     +'<button class="delbtn" onclick="delS('+s.id+')">Eliminar estanteria</button>'
     +'</div>';
 }
 
 function sp(id,k,v){var s=shelves.find(function(x){return x.id===id;});if(!s)return;s[k]=v;renderS(s);}
-function spn(id,k,d){var s=shelves.find(function(x){return x.id===id;});if(!s)return;s[k]=Math.max(1,Math.min(10,s[k]+d));renderS(s);var el=G(k==='huecos'?'PH':'PA');if(el)el.textContent=s[k];}
+function spn(id,k,d){
+  var s=shelves.find(function(x){return x.id===id;});if(!s)return;
+  s[k]=Math.max(1,Math.min(10,s[k]+d));
+  if(k==='huecos'){s.baldaHuecos={};}  // reset per-balda overrides
+  renderS(s);
+  var el=G(k==='huecos'?'PH':'PA');if(el)el.textContent=s[k];
+  if(k==='huecos'||k==='alturas')renderProps();
+}
 function delS(id){pushHistory();shelves=shelves.filter(function(s){return s.id!==id;});var el=G('S'+id);if(el)el.remove();selId=null;renderProps();buildChips();if(!shelves.length)G('HINT').style.display='block';toast('Eliminada');}
 
 /* ---- CELL MODAL ---- */
@@ -700,16 +807,23 @@ function buildWH(){
 }
 function toEst(s){
   if(!s.cells)s.cells={};
-  return{num:s.num,sid:s.id,nombre:s.nombre,huecos:Array.from({length:s.huecos},function(_,hi){return{num:hi+1,
-    alturas:Array.from({length:s.alturas},function(_,ai){var a=s.alturas-ai;var key=(hi+1)+'-'+a;
-      return{num:a,items:(s.cells[key]||[]).map(function(it){return{nombre:it.n,cantidad:1,estado:it.e,serie:''};})};})
-  };})};
+  var alturas=Array.from({length:s.alturas},function(_,ai){
+    var a=s.alturas-ai;
+    var nH=getHuecosForBalda(s,a);
+    return{num:a,huecos:Array.from({length:nH},function(_,hi){
+      var h=hi+1,key=h+'-'+a;
+      return{num:h,items:(s.cells[key]||[]).map(function(it){return{nombre:it.n,cantidad:1,estado:it.e,serie:''};})};
+    })};
+  });
+  return{num:s.num,sid:s.id,nombre:s.nombre,alturas:alturas};
 }
 function syncBack(){
   if(!wh)return;
   wh.pasillos.forEach(function(p){p.lados.forEach(function(l){l.estanterias.forEach(function(e){
     var s=shelves.find(function(x){return e.sid?x.id===e.sid:x.num===e.num;});if(!s)return;if(!s.cells)s.cells={};
-    e.huecos.forEach(function(h){h.alturas.forEach(function(a){s.cells[h.num+'-'+a.num]=(a.items||[]).map(function(it){return{n:it.nombre,e:it.estado};});});});
+    e.alturas.forEach(function(alt){alt.huecos.forEach(function(h){
+      s.cells[h.num+'-'+alt.num]=(h.items||[]).map(function(it){return{n:it.nombre,e:it.estado};});
+    });});
   });});});
 }
 
@@ -733,11 +847,11 @@ function renderFloor(){
       rev.forEach(function(e){
         // Calculate occupancy
         var totalCells=0,occupiedCells=0,hasRev=false,hasRot=false;
-        e.huecos.forEach(function(h){h.alturas.forEach(function(a){
+        e.alturas.forEach(function(alt){alt.huecos.forEach(function(h){
           totalCells++;
-          if(a.items&&a.items.length){
+          if(h.items&&h.items.length){
             occupiedCells++;
-            a.items.forEach(function(it){
+            h.items.forEach(function(it){
               if(it.estado==='Revision')hasRev=true;
               if(it.estado==='Roto')hasRot=true;
             });
@@ -752,11 +866,14 @@ function renderFloor(){
         else if(pct<0.5) stripBg='rgba('+hexToRgb(l.color)+',0.65)';
         var strip=document.createElement('div');strip.className='estrip';strip.style.background=stripBg;strip.dataset.pid=p.id;strip.dataset.lid=l.id;strip.dataset.num=e.num;
         if(invSel&&invSel.pid===p.id&&invSel.lid===l.id&&invSel.num===e.num)strip.classList.add('sel');
-        var hc=e.huecos.length,ac=e.huecos[0]&&e.huecos[0].alturas.length||1;
-        var mini='';e.huecos.forEach(function(h){h.alturas.forEach(function(a){mini+='<div class="mc'+(a.items&&a.items.length?' has':'')+'"></div>';});});
-        // Occupancy badge
+        var maxHC=e.alturas.length?Math.max.apply(null,e.alturas.map(function(a){return a.huecos.length;})):1;
+        var mini='';
+        e.alturas.forEach(function(alt){
+          alt.huecos.forEach(function(h){mini+='<div class="mc'+(h.items&&h.items.length?' has':'')+'"></div>';});
+          for(var i=alt.huecos.length;i<maxHC;i++)mini+='<div class="mc"></div>';
+        });
         var badge=occupiedCells>0?'<span style="font-size:8px;background:rgba(0,0,0,.3);border-radius:3px;padding:1px 4px;color:#fff">'+occupiedCells+'/'+totalCells+'</span>':'';
-        strip.innerHTML='<span style="font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:#fff;min-width:16px">'+e.num+'</span><div class="emini" style="grid-template-columns:repeat('+hc+',1fr)">'+mini+'</div>'+badge;
+        strip.innerHTML='<span style="font-family:Syne,sans-serif;font-size:12px;font-weight:800;color:#fff;min-width:16px">'+e.num+'</span><div class="emini" style="grid-template-columns:repeat('+maxHC+',1fr)">'+mini+'</div>'+badge;
         (function(pp,ll,ee){strip.onclick=function(){invSel={pid:pp.id,lid:ll.id,num:ee.num};renderFloor();renderContent();};})(p,l,e);
         col.appendChild(strip);
       });
@@ -775,20 +892,21 @@ function renderContent(){
   if(!e){cb.innerHTML='';renderShelfSummary(null,null);return;}
   renderShelfSummary(e,l);
   ct.textContent=p.nombre+' - '+l.nombre+' - Est.'+e.num+(e.nombre?' - '+e.nombre:'');
-  var tot=e.huecos.reduce(function(a,h){return a+h.alturas.reduce(function(b,alt){return b+(alt.items&&alt.items.length||0);},0);},0);
-  cs.textContent=tot+' items - '+e.huecos.length+' huecos x '+(e.huecos[0]&&e.huecos[0].alturas.length||0)+' alturas';
-  // Grid: columnas = huecos (eje horizontal), filas = alturas (eje vertical, mayor arriba)
-  var numHuecos=e.huecos.length;
-  var numAlturas=e.huecos[0]?e.huecos[0].alturas.length:1;
-  var html='<div class="cgrid" style="grid-template-columns:repeat('+numHuecos+',minmax(180px,1fr))">';
-  // Bucle exterior = alturas (índice 0 = la más alta), interior = huecos
-  for(var ai=0;ai<numAlturas;ai++){
-    e.huecos.forEach(function(h){
-      var alt=h.alturas[ai];
-      if(!alt)return;
-      var hN=h.num,aN=alt.num;
+  var tot=e.alturas.reduce(function(s,alt){return s+alt.huecos.reduce(function(s2,h){return s2+(h.items&&h.items.length||0);},0);},0);
+  var baldaInfo=e.alturas.map(function(alt){return alt.huecos.length+'H';}).join(' / ');
+  cs.textContent=tot+' items - '+e.alturas.length+' alturas ('+baldaInfo+')';
+  var html='<div style="display:flex;flex-direction:column;gap:14px">';
+  e.alturas.forEach(function(alt){
+    var nH=alt.huecos.length,aN=alt.num;
+    html+='<div>';
+    if(e.alturas.length>1){
+      html+='<div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:'+l.color+';padding:0 0 6px 2px">Balda A'+aN+' — '+nH+' hueco'+(nH!==1?'s':'')+'</div>';
+    }
+    html+='<div class="cgrid" style="grid-template-columns:repeat('+nH+',minmax(180px,1fr))">';
+    alt.huecos.forEach(function(h){
+      var hN=h.num;
       html+='<div class="ccard" data-h="'+hN+'" data-a="'+aN+'" onclick="window._transit?tryPlaceTransit('+hN+','+aN+'):catItemSel?tryPlaceFromCatWithQty('+hN+','+aN+'):null" style="cursor:pointer"><div class="cref" style="color:'+l.color+'">H'+hN+' / A'+aN+'</div><div>';
-      (alt.items||[]).forEach(function(it,i){
+      (h.items||[]).forEach(function(it,i){
         var ec=ECLS[it.estado]||'eOK';
         html+='<div class="icard" draggable="true" data-h="'+hN+'" data-a="'+aN+'" data-i="'+i+'"><div style="flex:1;min-width:0"><div class="icard-name">'+it.nombre+(it.cantidad>1?' <span style="background:#f0ece6;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;color:#5c5852">×'+it.cantidad+'</span>':'')+'</div>'
           +'<div class="iacts"><div class="iact" onclick="doCopy(\''+it.nombre.replace(/'/g,"\\'")+'\')" >Copiar</div>'
@@ -799,10 +917,10 @@ function renderContent(){
       if(clip)html+='<div class="pastebar" onclick="doPaste('+hN+','+aN+')">Pegar "'+clip.slice(0,20)+'"</div>';
       html+='<div class="addrow"><input class="addinp" id="AI'+hN+'_'+aN+'" placeholder="Anadir item..." onkeydown="if(event.key===\'Enter\')doAdd('+hN+','+aN+')"><button class="addbtn" onclick="doAdd('+hN+','+aN+')">+</button></div></div>';
     });
-  }
+    html+='</div></div>';
+  });
   html+='</div>';cb.innerHTML=html;
   initDragDrop();
-  // re-init floor drop (FDATA persists)
 }
 
 function getAlt(hNum,aNum){
@@ -810,8 +928,8 @@ function getAlt(hNum,aNum){
   var p=wh.pasillos.find(function(x){return x.id===invSel.pid;});
   var l=p&&p.lados.find(function(x){return x.id===invSel.lid;});
   var e=l&&l.estanterias.find(function(x){return x.num===invSel.num;});
-  var h=e&&e.huecos.find(function(x){return x.num===hNum;});
-  return h&&h.alturas.find(function(x){return x.num===aNum;});
+  var alt=e&&e.alturas.find(function(x){return x.num===aNum;});
+  return alt&&alt.huecos.find(function(x){return x.num===hNum;});
 }
 function doAdd(hNum,aNum){var inp=G('AI'+hNum+'_'+aNum);var nombre=inp&&inp.value.trim();if(!nombre)return;var alt=getAlt(hNum,aNum);if(!alt)return;if(!alt.items)alt.items=[];alt.items.push({nombre:nombre,cantidad:1,estado:'OK',serie:''});syncBack();renderFloor();renderContent();doSave();toast('Item anadido');}
 function doRm(hNum,aNum,idx){var alt=getAlt(hNum,aNum);if(!alt)return;alt.items.splice(idx,1);syncBack();renderFloor();renderContent();doSave();}
@@ -922,15 +1040,15 @@ function onGSearch(){
   wh.pasillos.forEach(function(p){
     p.lados.forEach(function(l){
       l.estanterias.forEach(function(e){
-        e.huecos.forEach(function(h){
-          h.alturas.forEach(function(a){
-            (a.items||[]).forEach(function(it){
+        e.alturas.forEach(function(alt){
+          alt.huecos.forEach(function(h){
+            (h.items||[]).forEach(function(it){
               if(it.nombre.toLowerCase().indexOf(ql) !== -1){
                 results.push({
                   nombre: it.nombre,
                   estado: it.estado,
                   cantidad: it.cantidad,
-                  loc: p.nombre+' · Est.'+e.num+(e.nombre?' ('+e.nombre+')':'')+' · H'+h.num+'/A'+a.num,
+                  loc: p.nombre+' · Est.'+e.num+(e.nombre?' ('+e.nombre+')':'')+' · H'+h.num+'/A'+alt.num,
                   pid: p.id, lid: l.id, snum: e.num
                 });
               }
@@ -1038,11 +1156,11 @@ function renderShelfSummary(e, l){
   var ss = G('SSUMMARY'); if(!ss) return;
   if(!e){ ss.style.display='none'; return; }
   var total=0, ok=0, rev=0, rot=0, occupied=0, totalCells=0;
-  e.huecos.forEach(function(h){
-    h.alturas.forEach(function(a){
+  e.alturas.forEach(function(alt){
+    alt.huecos.forEach(function(h){
       totalCells++;
-      if(a.items&&a.items.length){ occupied++; }
-      (a.items||[]).forEach(function(it){
+      if(h.items&&h.items.length){ occupied++; }
+      (h.items||[]).forEach(function(it){
         total += (it.cantidad||1);
         if(it.estado==='OK') ok+=(it.cantidad||1);
         else if(it.estado==='Revision') rev+=(it.cantidad||1);
@@ -1214,8 +1332,8 @@ function getPlacedNames(){
   var names={};
   if(!wh) return names;
   wh.pasillos.forEach(function(p){p.lados.forEach(function(l){l.estanterias.forEach(function(e){
-    e.huecos.forEach(function(h){h.alturas.forEach(function(a){
-      (a.items||[]).forEach(function(it){ names[it.nombre]=(names[it.nombre]||0)+(it.cantidad||1); });
+    e.alturas.forEach(function(alt){alt.huecos.forEach(function(h){
+      (h.items||[]).forEach(function(it){ names[it.nombre]=(names[it.nombre]||0)+(it.cantidad||1); });
     });});
   });});});
   return names;

@@ -173,7 +173,7 @@ body.placing .ccard{cursor:crosshair!important;box-shadow:0 0 0 2px #e8622a;}
 .conthd{padding:14px 20px 12px;border-bottom:1px solid #e5e0d8;background:#fff;flex-shrink:0}
 .ctitle{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
 .csub{font-size:12px;color:#9c9490;margin-top:2px}
-.contbody{flex:1;overflow-y:auto;padding:16px}
+.contbody{flex:1;overflow-y:auto;overflow-x:auto;padding:16px}
 .cgrid{display:grid;gap:10px}
 .ccard{background:#fff;border:1px solid #e5e0d8;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
 .cref{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
@@ -777,23 +777,29 @@ function renderContent(){
   ct.textContent=p.nombre+' - '+l.nombre+' - Est.'+e.num+(e.nombre?' - '+e.nombre:'');
   var tot=e.huecos.reduce(function(a,h){return a+h.alturas.reduce(function(b,alt){return b+(alt.items&&alt.items.length||0);},0);},0);
   cs.textContent=tot+' items - '+e.huecos.length+' huecos x '+(e.huecos[0]&&e.huecos[0].alturas.length||0)+' alturas';
-  var cols=Math.min(e.huecos.length,4);
-  var html='<div class="cgrid" style="grid-template-columns:repeat('+cols+',1fr)">';
-  e.huecos.forEach(function(h){
-    h.alturas.forEach(function(alt){
-      var hN=h.num,aN=alt.num;html+='<div class="ccard" data-h="'+hN+'" data-a="'+aN+'" onclick="window._transit?tryPlaceTransit('+hN+','+aN+'):catItemSel?tryPlaceFromCatWithQty('+hN+','+aN+'):null" style="cursor:pointer"><div class="cref" style="color:'+l.color+'">H'+h.num+' / A'+alt.num+'</div><div>';
+  // Grid: columnas = huecos (eje horizontal), filas = alturas (eje vertical, mayor arriba)
+  var numHuecos=e.huecos.length;
+  var numAlturas=e.huecos[0]?e.huecos[0].alturas.length:1;
+  var html='<div class="cgrid" style="grid-template-columns:repeat('+numHuecos+',minmax(180px,1fr))">';
+  // Bucle exterior = alturas (índice 0 = la más alta), interior = huecos
+  for(var ai=0;ai<numAlturas;ai++){
+    e.huecos.forEach(function(h){
+      var alt=h.alturas[ai];
+      if(!alt)return;
+      var hN=h.num,aN=alt.num;
+      html+='<div class="ccard" data-h="'+hN+'" data-a="'+aN+'" onclick="window._transit?tryPlaceTransit('+hN+','+aN+'):catItemSel?tryPlaceFromCatWithQty('+hN+','+aN+'):null" style="cursor:pointer"><div class="cref" style="color:'+l.color+'">H'+hN+' / A'+aN+'</div><div>';
       (alt.items||[]).forEach(function(it,i){
         var ec=ECLS[it.estado]||'eOK';
-        html+='<div class="icard" draggable="true" data-h="'+h.num+'" data-a="'+alt.num+'" data-i="'+i+'"><div style="flex:1;min-width:0"><div class="icard-name">'+it.nombre+(it.cantidad>1?' <span style="background:#f0ece6;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;color:#5c5852">×'+it.cantidad+'</span>':'')+'</div>'
+        html+='<div class="icard" draggable="true" data-h="'+hN+'" data-a="'+aN+'" data-i="'+i+'"><div style="flex:1;min-width:0"><div class="icard-name">'+it.nombre+(it.cantidad>1?' <span style="background:#f0ece6;border-radius:4px;padding:1px 5px;font-size:9px;font-weight:700;color:#5c5852">×'+it.cantidad+'</span>':'')+'</div>'
           +'<div class="iacts"><div class="iact" onclick="doCopy(\''+it.nombre.replace(/'/g,"\\'")+'\')" >Copiar</div>'
-          +'<div class="iact d" onclick="doRm('+h.num+','+alt.num+','+i+')">Eliminar</div></div></div>'
-          +'<div class="ebadge '+ec+'" onclick="cycleE('+h.num+','+alt.num+','+i+')">'+it.estado+'</div></div>';
+          +'<div class="iact d" onclick="doRm('+hN+','+aN+','+i+')">Eliminar</div></div></div>'
+          +'<div class="ebadge '+ec+'" onclick="cycleE('+hN+','+aN+','+i+')">'+it.estado+'</div></div>';
       });
       html+='</div>';
-      if(clip)html+='<div class="pastebar" onclick="doPaste('+h.num+','+alt.num+')">Pegar "'+clip.slice(0,20)+'"</div>';
-      html+='<div class="addrow"><input class="addinp" id="AI'+h.num+'_'+alt.num+'" placeholder="Anadir item..." onkeydown="if(event.key===\'Enter\')doAdd('+h.num+','+alt.num+')"><button class="addbtn" onclick="doAdd('+h.num+','+alt.num+')">+</button></div></div>';
+      if(clip)html+='<div class="pastebar" onclick="doPaste('+hN+','+aN+')">Pegar "'+clip.slice(0,20)+'"</div>';
+      html+='<div class="addrow"><input class="addinp" id="AI'+hN+'_'+aN+'" placeholder="Anadir item..." onkeydown="if(event.key===\'Enter\')doAdd('+hN+','+aN+')"><button class="addbtn" onclick="doAdd('+hN+','+aN+')">+</button></div></div>';
     });
-  });
+  }
   html+='</div>';cb.innerHTML=html;
   initDragDrop();
   // re-init floor drop (FDATA persists)

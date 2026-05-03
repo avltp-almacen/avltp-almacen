@@ -381,6 +381,7 @@ let shelves=[],sid=0,selId=null;
 let color=COLORS[0],orient='V',nH=3,nA=3,pnames={},zoom=1,history=[],histIdx=-1;
 let wh=null,invSel=null,clip=null;
 let drag=null;
+let _loaded=false;
 
 function G(id){return document.getElementById(id);}
 
@@ -500,6 +501,7 @@ function getLedMap(){
   });
 }
 function doAutoGpio(){
+  if(!_loaded){toast('Espera, cargando datos...');return;}
   // Pines seguros WS2812B en ESP32 DevKit (output, no boot-strapping, no flash, no input-only)
   var SAFE_PINS=[2,4,5,12,13,14,15,16,17,18,19,21,22,23,25,26,27,32,33];
   var idx=0;
@@ -512,26 +514,22 @@ function doAutoGpio(){
       total++;
     }
   });
-  // Re-render props if something is selected
+  if(!shelves.length){toast('No hay estanterias cargadas aun');return;}
   renderProps();
-  doSave();
-  toast('Auto GPIO: '+total+' baldas asignadas');
+  toast('Auto GPIO: '+total+' baldas asignadas — pulsa Guardar');
 }
+function doExportLed(){
   var map=getLedMap();
   var txt=JSON.stringify(map,null,2);
   window._ledTxt=txt;
   var old=document.getElementById('LEDMOD');if(old)old.remove();
   var ov=document.createElement('div');ov.className='eov';ov.id='LEDMOD';
   ov.onclick=function(e){if(e.target===ov)ov.remove();};
-  ov.innerHTML='<div class="emod">'
-    +'<h2>LED Map — WS2812B</h2>'
-    +'<p>JSON listo para el firmware ESP32. Cada hueco = 5 LEDs (<b>led_start</b> a <b>led_end</b>). GPIO por balda.</p>'
-    +'<textarea readonly id="LEDTXT" style="height:220px;font-size:9px">'+txt+'</textarea>'
-    +'<div class="ebtns">'
-    +'<button class="btn" onclick="document.getElementById(\'LEDMOD\').remove()">Cerrar</button>'
-    +'<button class="btn btnp" onclick="navigator.clipboard.writeText(window._ledTxt).then(function(){toast(\'Copiado\')})">Copiar</button>'
-    +'<button class="btn btnp" onclick="var a=document.createElement(\'a\');a.href=URL.createObjectURL(new Blob([window._ledTxt],{type:\'application/json\'}));a.download=\'led_map.json\';a.click()">Descargar</button>'
-    +'</div></div>';
+  ov.innerHTML='<div class="emod"><h2>LED Map — WS2812B</h2><p>JSON listo para ESP32. Cada hueco = 5 LEDs (led_start a led_end). GPIO por balda.</p><textarea readonly id="LEDTXT" style="height:220px;font-size:9px"></textarea><div class="ebtns"><button class="btn" id="LEDBTN_CLOSE">Cerrar</button><button class="btn btnp" id="LEDBTN_COPY">Copiar</button><button class="btn btnp" id="LEDBTN_DL">Descargar</button></div></div>';
+  ov.querySelector('#LEDTXT').value=txt;
+  ov.querySelector('#LEDBTN_CLOSE').onclick=function(){ov.remove();};
+  ov.querySelector('#LEDBTN_COPY').onclick=function(){navigator.clipboard.writeText(window._ledTxt).then(function(){toast('Copiado');});};
+  ov.querySelector('#LEDBTN_DL').onclick=function(){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([window._ledTxt],{type:'application/json'}));a.download='led_map.json';a.click();};
   document.body.appendChild(ov);
 }
 
@@ -1026,7 +1024,7 @@ function loadState(){
     .then(function(d){
       var st=d.record;
       if(!st||!st.shelves)return;
-      shelves=st.shelves||[];sid=st.sid||0;pnames=st.pnames||{};
+      shelves=st.shelves||[];sid=st.sid||0;pnames=st.pnames||{};_loaded=true;
       shelves.forEach(function(s){renderS(s);});
       if(shelves.length)G('HINT').style.display='none';
       buildColors();
